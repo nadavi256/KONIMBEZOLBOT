@@ -26,7 +26,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-CHANNEL_ID = -1002004379375
+CHANNEL_ID = int(os.environ.get("TELEGRAM_CHANNEL_ID", "-1002004379375"))
 PRODUCTS_PER_HOUR = 2  # 2 products per hour × 14 hours = 28/day
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
