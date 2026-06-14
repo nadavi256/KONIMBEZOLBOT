@@ -2,8 +2,9 @@ name: Telegram Bot - Hourly Products
 
 on:
   schedule:
-    # Every 15 minutes, 09:00-22:00 Israel time (UTC+3 = 06:00-19:00 UTC)
-    - cron: '*/15 6-19 * * *'
+    # Every 15 minutes, 09:00-22:00 Israel time (UTC+3)
+    # End at 18 UTC (21:00 IL) to absorb GitHub's ~60min delay
+    - cron: '*/15 6-18 * * *'
   workflow_dispatch:        # Manual trigger button in GitHub UI
 
 jobs:
