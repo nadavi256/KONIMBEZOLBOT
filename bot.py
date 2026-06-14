@@ -4,6 +4,7 @@ import os
 import random
 import sys
 
+import requests
 from dotenv import load_dotenv
 from telegram import Bot
 from telegram.error import TelegramError
@@ -25,92 +26,118 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-CHANNEL_ID = os.environ["TELEGRAM_CHANNEL_ID"]
-PRODUCTS_PER_DAY = 12
+CHANNEL_ID = -1002004379375
+PRODUCTS_PER_HOUR = 2  # 2 products per hour × 14 hours = 28/day
+
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 
-async def send_with_retry(bot: Bot, chat_id: str, text: str, image_url: str | None = None) -> bool:
+def is_valid_affiliate_link(url: str) -> bool:
+    """Return True only if the URL is a real AliExpress affiliate link that resolves (not 404)."""
+    if not url:
+        return False
+    # Must be an affiliate short-link
+    if "s.click.aliexpress.com" not in url and "aliexpress.com" not in url:
+        return False
+    try:
+        r = requests.head(url, allow_redirects=True, timeout=10, headers=HEADERS)
+        if r.status_code == 404:
+            return False
+        # Any 2xx or 3xx after following redirects is good
+        return r.status_code < 500
+    except Exception as e:
+        logger.warning(f"Link check failed for {url}: {e}")
+        return False
+
+
+async def send_with_retry(bot: Bot, text: str, image_url: str | None = None) -> bool:
     for attempt in range(4):
         try:
             if image_url:
                 try:
                     await bot.send_photo(
-                        chat_id=chat_id,
+                        chat_id=CHANNEL_ID,
                         photo=image_url,
                         caption=text,
-                        parse_mode="Markdown",
+                        parse_mode="HTML",
                     )
                     return True
                 except TelegramError:
-                    # Photo failed - fall back to text only
-                    await bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+                    await bot.send_message(chat_id=CHANNEL_ID, text=text, parse_mode="HTML")
                     return True
             else:
-                await bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+                await bot.send_message(chat_id=CHANNEL_ID, text=text, parse_mode="HTML")
                 return True
         except TelegramError as e:
             wait = 2 ** attempt * 2
-            logger.warning(f"Telegram error (attempt {attempt + 1}/4): {e}. Retrying in {wait}s…")
+            logger.warning(f"Telegram error (attempt {attempt + 1}/4): {e}. Retry in {wait}s…")
             await asyncio.sleep(wait)
-    logger.error(f"Failed to send message after 4 attempts")
+    logger.error("Failed to send after 4 attempts")
     return False
 
 
-async def send_daily_products():
-    logger.info("=== Starting daily product send ===")
+async def send_hourly_products():
+    """Scrape products, validate affiliate links, and post to channel."""
+    logger.info("=== Hourly send started ===")
     bot = Bot(token=BOT_TOKEN)
 
     try:
-        products = get_products(count=PRODUCTS_PER_DAY)
+        # Fetch more than needed so we have extras after link validation
+        candidates = await get_products(count=PRODUCTS_PER_HOUR * 5)
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
         return
 
-    if not products:
-        logger.error("No products scraped – aborting send")
+    # Validate affiliate links
+    valid_products = []
+    for p in candidates:
+        link = p.get("aliexpress_link", "")
+        if is_valid_affiliate_link(link):
+            valid_products.append(p)
+            logger.info(f"  ✅ link OK: {link[:60]}")
+        else:
+            logger.warning(f"  ❌ link INVALID/404 – skipping: {p['name'][:40]}")
+        if len(valid_products) >= PRODUCTS_PER_HOUR:
+            break
+
+    if not valid_products:
+        logger.error("No valid products after link validation – aborting")
         return
 
-    count = len(products)
-    logger.info(f"Sending {count} products to {CHANNEL_ID}")
+    count = len(valid_products)
+    logger.info(f"Sending {count} validated products")
 
-    # Header
-    await send_with_retry(bot, CHANNEL_ID, build_daily_header(count))
-    await asyncio.sleep(4)
-
-    # Products
-    for i, product in enumerate(products, start=1):
+    for i, product in enumerate(valid_products, start=1):
         text = build_message(product, i, count)
-        ok = await send_with_retry(bot, CHANNEL_ID, text, product.get("image_url"))
-        status = "✅" if ok else "❌"
-        logger.info(f"{status} [{i}/{count}] {product['name'][:55]}")
+        ok = await send_with_retry(bot, text, product.get("image_url"))
+        logger.info(f"{'✅' if ok else '❌'} [{i}/{count}] {product['name'][:55]}")
         if i < count:
-            await asyncio.sleep(random.randint(4, 9))
+            await asyncio.sleep(random.randint(3, 7))
 
-    # Footer
-    await asyncio.sleep(4)
-    await send_with_retry(bot, CHANNEL_ID, build_daily_footer())
-
-    logger.info("=== Daily send complete ===")
+    logger.info("=== Hourly send complete ===")
 
 
 async def main():
-    logger.info("Bot starting up…")
-    bot = Bot(token=BOT_TOKEN)
-    me = await bot.get_me()
-    logger.info(f"Logged in as: {me.full_name} (@{me.username})")
+    logger.info("Bot starting…")
+    async with Bot(token=BOT_TOKEN) as bot:
+        me = await bot.get_me()
+        logger.info(f"Logged in as {me.full_name} (@{me.username})")
 
     scheduler = AsyncIOScheduler(timezone="Asia/Jerusalem")
 
-    # Morning batch – 09:00 Israel time
-    scheduler.add_job(send_daily_products, "cron", hour=9, minute=0,
-                      id="morning", replace_existing=True)
-    # Evening batch – 18:00 Israel time
-    scheduler.add_job(send_daily_products, "cron", hour=18, minute=0,
-                      id="evening", replace_existing=True)
+    # Every hour on the hour, 09:00–22:00 Israel time
+    scheduler.add_job(
+        send_hourly_products,
+        trigger="cron",
+        hour="9-22",
+        minute=0,
+        id="hourly_products",
+        replace_existing=True,
+    )
 
     scheduler.start()
-    logger.info("Scheduled: 09:00 and 18:00 (Asia/Jerusalem)")
-    logger.info(f"Channel: {CHANNEL_ID}")
+    logger.info("Scheduled: every hour 09:00–22:00 (Asia/Jerusalem)")
+    logger.info(f"Channel ID: {CHANNEL_ID}")
 
     try:
         while True:
@@ -122,6 +149,6 @@ async def main():
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "send-now":
-        asyncio.run(send_daily_products())
+        asyncio.run(send_hourly_products())
     else:
         asyncio.run(main())
