@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import random
-import time
+import sys
 
 from dotenv import load_dotenv
 from telegram import Bot
@@ -26,17 +26,11 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 CHANNEL_ID = os.environ["TELEGRAM_CHANNEL_ID"]
-
-# How many products to send per day
 PRODUCTS_PER_DAY = 12
 
-# Delay between messages (seconds) - spread over the day
-# We send header + 12 products + footer. Spread across ~8 hours morning session.
-MESSAGE_INTERVAL_SECONDS = 60 * 25  # 25 minutes between each product
 
-
-async def send_message_with_retry(bot: Bot, chat_id: str, text: str, image_url: str | None = None) -> bool:
-    for attempt in range(3):
+async def send_with_retry(bot: Bot, chat_id: str, text: str, image_url: str | None = None) -> bool:
+    for attempt in range(4):
         try:
             if image_url:
                 try:
@@ -48,22 +42,22 @@ async def send_message_with_retry(bot: Bot, chat_id: str, text: str, image_url: 
                     )
                     return True
                 except TelegramError:
-                    # Fall back to text-only if photo fails
+                    # Photo failed - fall back to text only
                     await bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
                     return True
             else:
                 await bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
                 return True
         except TelegramError as e:
-            logger.warning(f"Telegram error (attempt {attempt + 1}/3): {e}")
-            if attempt < 2:
-                await asyncio.sleep(2 ** attempt * 2)
+            wait = 2 ** attempt * 2
+            logger.warning(f"Telegram error (attempt {attempt + 1}/4): {e}. Retrying in {wait}s…")
+            await asyncio.sleep(wait)
+    logger.error(f"Failed to send message after 4 attempts")
     return False
 
 
 async def send_daily_products():
-    """Main job: scrape products and post them to the channel."""
-    logger.info("Starting daily product send job")
+    logger.info("=== Starting daily product send ===")
     bot = Bot(token=BOT_TOKEN)
 
     try:
@@ -73,76 +67,51 @@ async def send_daily_products():
         return
 
     if not products:
-        logger.error("No products to send")
+        logger.error("No products scraped – aborting send")
         return
 
     count = len(products)
+    logger.info(f"Sending {count} products to {CHANNEL_ID}")
 
-    # Send header
-    header = build_daily_header(count)
-    await send_message_with_retry(bot, CHANNEL_ID, header)
-    await asyncio.sleep(3)
+    # Header
+    await send_with_retry(bot, CHANNEL_ID, build_daily_header(count))
+    await asyncio.sleep(4)
 
-    # Send each product
+    # Products
     for i, product in enumerate(products, start=1):
         text = build_message(product, i, count)
-        image = product.get("image_url")
-        success = await send_message_with_retry(bot, CHANNEL_ID, text, image)
-        if success:
-            logger.info(f"Sent product {i}/{count}: {product['name']}")
-        else:
-            logger.error(f"Failed to send product {i}/{count}: {product['name']}")
-
+        ok = await send_with_retry(bot, CHANNEL_ID, text, product.get("image_url"))
+        status = "✅" if ok else "❌"
+        logger.info(f"{status} [{i}/{count}] {product['name'][:55]}")
         if i < count:
-            # Small delay between messages to avoid rate limiting
-            delay = random.randint(3, 8)
-            await asyncio.sleep(delay)
+            await asyncio.sleep(random.randint(4, 9))
 
-    # Send footer
-    await asyncio.sleep(3)
-    footer = build_daily_footer()
-    await send_message_with_retry(bot, CHANNEL_ID, footer)
+    # Footer
+    await asyncio.sleep(4)
+    await send_with_retry(bot, CHANNEL_ID, build_daily_footer())
 
-    logger.info("Daily product send complete")
-
-
-async def send_now():
-    """Send products immediately (for testing or manual trigger)."""
-    await send_daily_products()
+    logger.info("=== Daily send complete ===")
 
 
 async def main():
-    logger.info("Bot starting up...")
+    logger.info("Bot starting up…")
+    bot = Bot(token=BOT_TOKEN)
+    me = await bot.get_me()
+    logger.info(f"Logged in as: {me.full_name} (@{me.username})")
 
     scheduler = AsyncIOScheduler(timezone="Asia/Jerusalem")
 
-    # Schedule daily at 09:00 Israel time
-    scheduler.add_job(
-        send_daily_products,
-        trigger="cron",
-        hour=9,
-        minute=0,
-        id="daily_products",
-        name="Daily Products Send",
-        replace_existing=True,
-    )
-
-    # Optional: second batch at 18:00 (evening)
-    scheduler.add_job(
-        send_daily_products,
-        trigger="cron",
-        hour=18,
-        minute=0,
-        id="evening_products",
-        name="Evening Products Send",
-        replace_existing=True,
-    )
+    # Morning batch – 09:00 Israel time
+    scheduler.add_job(send_daily_products, "cron", hour=9, minute=0,
+                      id="morning", replace_existing=True)
+    # Evening batch – 18:00 Israel time
+    scheduler.add_job(send_daily_products, "cron", hour=18, minute=0,
+                      id="evening", replace_existing=True)
 
     scheduler.start()
-    logger.info("Scheduler started. Jobs scheduled at 09:00 and 18:00 Israel time.")
-    logger.info(f"Posting to channel: {CHANNEL_ID}")
+    logger.info("Scheduled: 09:00 and 18:00 (Asia/Jerusalem)")
+    logger.info(f"Channel: {CHANNEL_ID}")
 
-    # Keep running
     try:
         while True:
             await asyncio.sleep(60)
@@ -152,10 +121,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    import sys
-
     if len(sys.argv) > 1 and sys.argv[1] == "send-now":
-        # python bot.py send-now  → immediate send for testing
-        asyncio.run(send_now())
+        asyncio.run(send_daily_products())
     else:
         asyncio.run(main())
