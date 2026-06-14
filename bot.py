@@ -30,7 +30,9 @@ _channel_env = os.environ.get("TELEGRAM_CHANNEL_ID", "-1002004379375")
 try:
     CHANNEL_ID = int(_channel_env)
 except ValueError:
-    CHANNEL_ID = _channel_env  # username like @alikibali
+    CHANNEL_ID = -1002004379375  # fallback to known numeric ID
+logger_channel = logging.getLogger(__name__ + ".channel")
+# Will be printed at startup
 PRODUCTS_PER_HOUR = 2  # 2 products per hour × 14 hours = 28/day
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -81,6 +83,7 @@ async def send_with_retry(bot: Bot, text: str, image_url: str | None = None) -> 
 
 
 async def send_hourly_products():
+    logger.info(f"Using channel ID: {CHANNEL_ID} (type: {type(CHANNEL_ID).__name__})")
     """Scrape products, validate affiliate links, and post to channel."""
     logger.info("=== Hourly send started ===")
     bot = Bot(token=BOT_TOKEN)
