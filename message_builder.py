@@ -79,41 +79,40 @@ def _e(text: str) -> str:
     return html.escape(str(text))
 
 
-def build_message(product: dict, index: int, total: int) -> str:
-    hook        = random.choice(HOOKS)
-    emotional   = random.choice(EMOTIONAL_LINES)
-    urgency     = random.choice(URGENCY)
-    proof       = random.choice(SOCIAL_PROOF)
-    cta         = random.choice(CTAS)
-    cat_emoji   = CATEGORY_EMOJIS.get(product.get("category", ""), "⭐")
+def build_message(product: dict, index: int = 1, total: int = 1) -> str:
+    hook      = random.choice(HOOKS)
+    emotional = random.choice(EMOTIONAL_LINES)
+    urgency   = random.choice(URGENCY)
+    proof     = random.choice(SOCIAL_PROOF)
+    cta       = random.choice(CTAS)
+    cat_emoji = CATEGORY_EMOJIS.get(product.get("category", ""), "⭐")
 
-    name        = _e(product.get("name", "מוצר מיוחד"))
-    description = product.get("description", "")
-    category    = _e(product.get("category", "מוצר מומלץ"))
-    link        = product["aliexpress_link"]
+    name     = _e(product.get("name", "מוצר מיוחד"))
+    desc_raw = product.get("description", "")
+    link     = product["aliexpress_link"]
 
-    # קיצור תיאור ל-130 תווים
-    if description:
-        desc_clean = description[:130].rsplit(" ", 1)[0] + "..."  if len(description) > 130 else description
-        desc_line  = f"\n📌 {_e(desc_clean)}\n"
+    # תיאור מקוצר ונקי עד 120 תווים
+    if desc_raw:
+        desc_clean = desc_raw[:120].rsplit(" ", 1)[0] + "..." if len(desc_raw) > 120 else desc_raw
+        desc_block = f"📌 {_e(desc_clean)}\n\n"
     else:
-        desc_line = "\n"
+        desc_block = ""
 
-    text = (
-        f"{hook}\n"
-        f"\n"
-        f"{cat_emoji} <b>{name}</b>\n"
-        f"{desc_line}"
-        f"{emotional}\n"
-        f"\n"
-        f"{proof}\n"
-        f"\n"
-        f"{urgency}\n"
-        f"\n"
-        f"{cta}\n"
-        f'<a href="{link}">👉 לחץ כאן לרכישה באלי אקספרס</a>'
-    )
-    return text
+    lines = [
+        hook,
+        "",
+        f"{cat_emoji} <b>{name}</b>",
+        "",
+        desc_block + emotional,
+        "",
+        proof,
+        "",
+        urgency,
+        "",
+        cta,
+        f'<a href="{link}">👉 לחץ כאן לרכישה באלי אקספרס</a>',
+    ]
+    return "\n".join(lines)
 
 
 # ── HOURLY OPENERS ── כותרת לכל שעה
