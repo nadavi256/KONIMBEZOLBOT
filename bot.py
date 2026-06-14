@@ -11,7 +11,7 @@ from telegram.error import TelegramError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from scraper import get_products
-from message_builder import build_message, build_daily_header, build_daily_footer
+from message_builder import build_message, build_hourly_header, build_daily_header, build_daily_footer
 
 load_dotenv()
 
@@ -106,6 +106,10 @@ async def send_hourly_products():
 
     count = len(valid_products)
     logger.info(f"Sending {count} validated products")
+
+    # Send opener before products
+    await send_with_retry(bot, build_hourly_header())
+    await asyncio.sleep(3)
 
     for i, product in enumerate(valid_products, start=1):
         text = build_message(product, i, count)
