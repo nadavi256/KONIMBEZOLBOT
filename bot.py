@@ -12,6 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from scraper import get_products
 from message_builder import build_message, build_hourly_header, build_daily_header, build_daily_footer
+from sent_tracker import load_sent, save_sent
 
 load_dotenv()
 
@@ -88,16 +89,23 @@ async def send_hourly_products():
     logger.info("=== Hourly send started ===")
     bot = Bot(token=BOT_TOKEN)
 
+    sent_urls = load_sent()
+    logger.info(f"Already sent: {len(sent_urls)} products")
+
     try:
-        # Fetch more than needed so we have extras after link validation
-        candidates = await get_products(count=PRODUCTS_PER_HOUR * 5)
+        # Fetch more than needed so we have extras after filtering
+        candidates = await get_products(count=PRODUCTS_PER_HOUR * 8)
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
         return
 
-    # Validate affiliate links
+    # Filter out already-sent products, then validate affiliate links
     valid_products = []
     for p in candidates:
+        source_url = p.get("source_url", "")
+        if source_url in sent_urls:
+            logger.info(f"  ⏭ already sent – skipping: {p['name'][:40]}")
+            continue
         link = p.get("aliexpress_link", "")
         if is_valid_affiliate_link(link):
             valid_products.append(p)
@@ -108,23 +116,28 @@ async def send_hourly_products():
             break
 
     if not valid_products:
-        logger.error("No valid products after link validation – aborting")
+        logger.error("No new unsent products after filtering – aborting")
         return
 
     count = len(valid_products)
-    logger.info(f"Sending {count} validated products")
+    logger.info(f"Sending {count} new products")
 
     # Send opener before products
     await send_with_retry(bot, build_hourly_header())
     await asyncio.sleep(3)
 
+    newly_sent = set()
     for i, product in enumerate(valid_products, start=1):
         text = build_message(product, i, count)
         ok = await send_with_retry(bot, text, product.get("image_url"))
         logger.info(f"{'✅' if ok else '❌'} [{i}/{count}] {product['name'][:55]}")
+        if ok:
+            newly_sent.add(product["source_url"])
         if i < count:
             await asyncio.sleep(random.randint(3, 7))
 
+    # Persist sent URLs
+    save_sent(sent_urls | newly_sent)
     logger.info("=== Hourly send complete ===")
 
 
