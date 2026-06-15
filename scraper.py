@@ -90,6 +90,23 @@ async def _get_aliexpress_stats(ali_url: str, page) -> dict:
     return stats
 
 
+def _clean_name(name: str) -> str:
+    """Remove 'ביקורת/סקירת/המלצת' prefixes that appear in site page titles."""
+    prefixes = ["ביקורת", "סקירת", "המלצת", "ביקורת:", "סקירה:", "Review:"]
+    for prefix in prefixes:
+        if name.startswith(prefix):
+            name = name[len(prefix):].strip(" :-–")
+    return name.strip()
+
+
+def _clean_feature(text: str) -> str:
+    """Clean feature text: remove slashes, extra whitespace, fix formatting."""
+    text = text.replace("/", " | ").replace("\\", "")
+    # Remove lines that start with slash or are just punctuation
+    text = " ".join(text.split())  # normalize whitespace
+    return text.strip(" :-–•·")
+
+
 async def scrape_product_async(url: str, page) -> dict | None:
     try:
         await page.goto(url, wait_until="networkidle", timeout=25000)
@@ -119,6 +136,7 @@ async def scrape_product_async(url: str, page) -> dict | None:
             name = og_title.strip() if og_title else None
         if not name:
             return None
+        name = _clean_name(name)
 
         image_url = await page.get_attribute('meta[property="og:image"]', "content")
         if not image_url:
@@ -129,14 +147,18 @@ async def scrape_product_async(url: str, page) -> dict | None:
         try:
             li_texts = await page.eval_on_selector_all(
                 "li",
-                "els => els.map(e => e.innerText.trim()).filter(t => t.length > 5 && t.length < 120)"
+                "els => els.map(e => e.innerText.trim()).filter(t => t.length > 5 && t.length < 150)"
             )
-            # Filter out nav/menu items — keep lines that look like product features
+            skip_words = ["login", "cart", "menu", "home", "search", "כל הקטגוריות", "דף הבית",
+                          "עגלה", "חיפוש", "התחבר", "הרשם", "צור קשר", "אודות", "privacy", "terms"]
             for t in li_texts:
                 t = t.strip().replace("\n", " ")
-                # Skip very short, very long, or navigation-looking items
-                if 8 < len(t) < 100 and not any(x in t.lower() for x in ["login", "cart", "menu", "home", "search", "כל הקטגוריות", "דף הבית"]):
-                    features.append(t)
+                cleaned = _clean_feature(t)
+                # Skip nav/junk items, items with slashes only, or very short/long
+                if (8 < len(cleaned) < 90
+                        and not any(x in cleaned.lower() for x in skip_words)
+                        and cleaned.count("/") < 2):
+                    features.append(cleaned)
                 if len(features) >= 6:
                     break
         except Exception:

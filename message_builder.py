@@ -23,7 +23,7 @@ HOOKS_BY_CATEGORY = {
     ],
     "ספורט וכושר": [
         "💪 <b>התוצאות שרצית</b> – עכשיו יש לך את הכלי להשיג אותן.",
-        "🏋️ אנשים שרצינו לשפר את הכושר שלהם <b>מחפשים בדיוק את זה.</b>",
+        "🏋️ מי שרוצה לשפר את הכושר שלו – <b>מחפש בדיוק את זה.</b>",
         "⚡ <b>שדרוג האימון שלך</b> מתחיל כאן. לא מחר. עכשיו.",
         "🎯 פחות מאמץ. <b>יותר תוצאות.</b> זה מה שהמוצר הזה עושה.",
     ],
@@ -77,7 +77,7 @@ OPENERS_BY_CATEGORY = {
     ],
     "ספורט וכושר": [
         "הציוד שיעזור לכם <b>להגיע לאן שתמיד רציתם.</b>",
-        "כי האימון הטוב ביותר מתחיל <b>בהכנה הנכונה.</b>",
+        "כי האימון הטוב ביותר מתחיל <b>בציוד הנכון.</b>",
         "תוצאות אמיתיות מתחילות <b>בהחלטה אחת.</b>",
     ],
     "בית וגן": [
@@ -133,15 +133,19 @@ def build_message(product: dict, index: int = 1, total: int = 1) -> str:
     orders   = product.get("orders")
     rating   = product.get("rating")
 
-    # Feature bullets — max 6 lines, short enough to not wrap
+    # Feature bullets — max 6 lines, clean and short
     feature_lines = ""
     if features:
         bullets = []
         for f in features[:6]:
-            f = f.strip()
-            # Truncate to ~55 chars to avoid line wrap in Telegram
-            if len(f) > 60:
-                f = f[:57].rsplit(" ", 1)[0] + "..."
+            f = f.strip().replace("/", "").replace("\\", "")
+            f = " ".join(f.split())  # normalize spaces
+            f = f.strip(" :-–•·")
+            if not f:
+                continue
+            # Truncate to avoid line wrap in Telegram
+            if len(f) > 55:
+                f = f[:52].rsplit(" ", 1)[0] + "..."
             bullets.append(f"✅ {_e(f)}")
         feature_lines = "\n".join(bullets)
 
