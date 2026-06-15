@@ -1,55 +1,65 @@
+import base64
 import json
 import logging
 import os
-import subprocess
-import time
-from pathlib import Path
+
+import requests
 
 logger = logging.getLogger(__name__)
 
-SENT_FILE = Path(__file__).parent / "sent_urls.json"
 GH_PAT = os.environ.get("GH_PAT", "")
 REPO = "nadavi256/KONIMBEZOLBOT"
+FILE_PATH = "sent_urls.json"
+API_URL = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
+HEADERS = {
+    "Authorization": f"token {GH_PAT}",
+    "Accept": "application/vnd.github.v3+json",
+}
 
 
 def load_sent() -> set:
-    if SENT_FILE.exists():
-        try:
-            return set(json.loads(SENT_FILE.read_text(encoding="utf-8")))
-        except Exception:
-            pass
-    return set()
+    if not GH_PAT:
+        logger.warning("GH_PAT not set — cannot load sent list")
+        return set()
+    try:
+        r = requests.get(API_URL, headers=HEADERS, timeout=10)
+        if r.status_code == 404:
+            return set()
+        r.raise_for_status()
+        content = base64.b64decode(r.json()["content"]).decode("utf-8")
+        data = json.loads(content)
+        logger.info(f"Loaded {len(data)} sent URLs from GitHub")
+        return set(data)
+    except Exception as e:
+        logger.error(f"Failed to load sent_urls.json: {e}")
+        return set()
 
 
 def save_sent(sent: set) -> None:
-    SENT_FILE.write_text(json.dumps(sorted(sent), indent=2, ensure_ascii=False), encoding="utf-8")
-    _push_sent_file()
-
-
-def _push_sent_file() -> None:
     if not GH_PAT:
-        logger.warning("GH_PAT not set — skipping sent_urls.json push")
+        logger.warning("GH_PAT not set — cannot save sent list")
         return
     try:
-        env = {**os.environ, "GIT_AUTHOR_NAME": "bot", "GIT_AUTHOR_EMAIL": "bot@bot.com",
-               "GIT_COMMITTER_NAME": "bot", "GIT_COMMITTER_EMAIL": "bot@bot.com"}
-        remote = f"https://x-access-token:{GH_PAT}@github.com/{REPO}.git"
-        subprocess.run(["git", "pull", "--rebase", remote, "main"], check=False, capture_output=True, env=env)
-        subprocess.run(["git", "add", "sent_urls.json"], check=True, capture_output=True)
-        result = subprocess.run(
-            ["git", "commit", "-m", "chore: update sent products list"],
-            capture_output=True, env=env
-        )
-        if result.returncode == 0:
-            for attempt in range(4):
-                r = subprocess.run(["git", "push", remote, "main"], capture_output=True, env=env)
-                if r.returncode == 0:
-                    logger.info("sent_urls.json pushed to GitHub")
-                    return
-                wait = 2 ** attempt * 2
-                logger.warning(f"Push failed (attempt {attempt+1}/4), retrying in {wait}s")
-                time.sleep(wait)
-        else:
-            logger.info("Nothing new to commit in sent_urls.json")
+        content_b64 = base64.b64encode(
+            json.dumps(sorted(sent), indent=2, ensure_ascii=False).encode("utf-8")
+        ).decode("utf-8")
+
+        # Get current SHA (needed for update)
+        sha = None
+        r = requests.get(API_URL, headers=HEADERS, timeout=10)
+        if r.status_code == 200:
+            sha = r.json().get("sha")
+
+        payload = {
+            "message": "chore: update sent products list",
+            "content": content_b64,
+            "committer": {"name": "bot", "email": "bot@bot.com"},
+        }
+        if sha:
+            payload["sha"] = sha
+
+        r2 = requests.put(API_URL, headers=HEADERS, json=payload, timeout=15)
+        r2.raise_for_status()
+        logger.info(f"Saved {len(sent)} sent URLs to GitHub")
     except Exception as e:
-        logger.error(f"Failed to push sent_urls.json: {e}")
+        logger.error(f"Failed to save sent_urls.json: {e}")
