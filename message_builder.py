@@ -138,14 +138,14 @@ def build_message(product: dict, index: int = 1, total: int = 1) -> str:
     if features:
         bullets = []
         for f in features[:6]:
-            f = f.strip().replace("/", "").replace("\\", "")
-            f = " ".join(f.split())  # normalize spaces
+            f = f.strip().replace("/", "").replace("\\", "").replace("|", "")
+            f = " ".join(f.split())
             f = f.strip(" :-–•·")
             if not f:
                 continue
-            # Truncate to avoid line wrap in Telegram
-            if len(f) > 55:
-                f = f[:52].rsplit(" ", 1)[0] + "..."
+            # Keep short enough to not wrap in Telegram (Hebrew ~45 chars max)
+            if len(f) > 45:
+                f = f[:42].rsplit(" ", 1)[0] + "..."
             bullets.append(f"✅ {_e(f)}")
         feature_lines = "\n".join(bullets)
 

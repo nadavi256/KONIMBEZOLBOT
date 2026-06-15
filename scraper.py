@@ -101,8 +101,7 @@ def _clean_name(name: str) -> str:
 
 def _clean_feature(text: str) -> str:
     """Clean feature text: remove slashes, extra whitespace, fix formatting."""
-    text = text.replace("/", " | ").replace("\\", "")
-    # Remove lines that start with slash or are just punctuation
+    text = text.replace("/", "").replace("\\", "").replace("|", "")
     text = " ".join(text.split())  # normalize whitespace
     return text.strip(" :-–•·")
 
@@ -150,14 +149,21 @@ async def scrape_product_async(url: str, page) -> dict | None:
                 "els => els.map(e => e.innerText.trim()).filter(t => t.length > 5 && t.length < 150)"
             )
             skip_words = ["login", "cart", "menu", "home", "search", "כל הקטגוריות", "דף הבית",
-                          "עגלה", "חיפוש", "התחבר", "הרשם", "צור קשר", "אודות", "privacy", "terms"]
+                          "עגלה", "חיפוש", "התחבר", "הרשם", "צור קשר", "אודות", "privacy", "terms",
+                          "מוצרים לרכב", "אופנה וסטייל", "מוצרי מטבח", "ספורט וכושר",
+                          "בית וגן", "שעונים ותכשיטים", "גאדג'טים"]
+            name_lower = name.lower() if name else ""
             for t in li_texts:
                 t = t.strip().replace("\n", " ")
                 cleaned = _clean_feature(t)
-                # Skip nav/junk items, items with slashes only, or very short/long
-                if (8 < len(cleaned) < 90
-                        and not any(x in cleaned.lower() for x in skip_words)
-                        and cleaned.count("/") < 2):
+                if not cleaned:
+                    continue
+                # Skip nav/breadcrumb/category items and items that are just the product name
+                if any(x in cleaned for x in skip_words):
+                    continue
+                if cleaned.lower() in name_lower or name_lower in cleaned.lower():
+                    continue
+                if 10 < len(cleaned) < 75:
                     features.append(cleaned)
                 if len(features) >= 6:
                     break
