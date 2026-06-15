@@ -145,15 +145,15 @@ def build_message(product: dict, index: int = 1, total: int = 1) -> str:
             bullets.append(f"✅ {_e(f)}")
         feature_lines = "\n".join(bullets)
 
-    # Social proof line with real data
+    # Social proof line — only show real data, never invent numbers
     if orders and rating:
-        proof_line = f"מעל {_e(orders)} רכישות + {_e(rating)} דירוג (משלוח חינם)."
+        proof_line = f"✅ מעל {_e(orders)} רכישות | דירוג {_e(rating)} ⭐"
     elif orders:
-        proof_line = f"מעל {_e(orders)} רכישות (משלוח חינם)."
+        proof_line = f"✅ מעל {_e(orders)} רכישות"
     elif rating:
-        proof_line = f"דירוג {_e(rating)} ⭐ (משלוח חינם)."
+        proof_line = f"✅ דירוג {_e(rating)} ⭐"
     else:
-        proof_line = "⭐⭐⭐⭐⭐ אלפי קונים מרוצים (משלוח חינם)."
+        proof_line = None
 
     lines = [
         hook,
@@ -167,11 +167,10 @@ def build_message(product: dict, index: int = 1, total: int = 1) -> str:
     if feature_lines:
         lines += [feature_lines, ""]
 
-    lines += [
-        proof_line,
-        "",
-        f"לרכישה ➡️ {link}",
-    ]
+    if proof_line:
+        lines += [proof_line, ""]
+
+    lines.append(f"לרכישה ➡️ {link}")
 
     return "\n".join(lines)
 

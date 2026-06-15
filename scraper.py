@@ -56,20 +56,32 @@ async def _get_aliexpress_stats(ali_url: str, page) -> dict:
     """Scrape purchase count and rating from AliExpress product page."""
     stats = {"orders": None, "rating": None}
     try:
-        await page.goto(ali_url, wait_until="domcontentloaded", timeout=20000)
-        await page.wait_for_timeout(3000)
+        await page.goto(ali_url, wait_until="domcontentloaded", timeout=25000)
+        await page.wait_for_timeout(4000)
         body = await page.inner_text("body")
 
-        # Orders: look for patterns like "1000+ sold", "2.3K+ sold", "1000+ orders"
+        # Orders: "1000+ sold", "2.3K+ sold", "10K+ sold", "500 orders"
         orders_match = re.search(
-            r"([\d,]+\.?\d*[Kk]?\+?\s*(?:sold|orders|הזמנות|נמכרו))",
+            r"([\d,]+(?:\.\d+)?[Kk]?\+?)\s*(?:sold|orders|הזמנות|נמכרו)",
             body, re.IGNORECASE
         )
         if orders_match:
-            stats["orders"] = orders_match.group(1).strip()
+            raw = orders_match.group(1).replace(",", "").strip()
+            # Normalize: 2.3K -> 2300, 10K -> 10000
+            if raw.lower().endswith("k"):
+                num = float(raw[:-1]) * 1000
+                stats["orders"] = f"{int(num):,}"
+            else:
+                stats["orders"] = raw
 
-        # Rating: look for patterns like "4.8" near "rating" or stars
-        rating_match = re.search(r"\b(4\.\d|5\.0)\b", body)
+        # Rating: look for X.X pattern near "rating" or standalone 4.x/5.0
+        rating_match = re.search(
+            r"\b([4-5]\.\d)\b(?:[^\n]{0,30}(?:rating|stars|דירוג|כוכב))?",
+            body, re.IGNORECASE
+        )
+        if not rating_match:
+            # fallback: any 4.x or 5.0 number
+            rating_match = re.search(r"\b([4-5]\.\d)\b", body)
         if rating_match:
             stats["rating"] = rating_match.group(1)
 
