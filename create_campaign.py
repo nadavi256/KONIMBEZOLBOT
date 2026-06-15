@@ -62,24 +62,36 @@ async def create_campaign():
             await page.wait_for_selector('#generalupdateform-name', timeout=15000)
             await page.fill('#generalupdateform-name', CAMPAIGN_NAME)
 
-            # גאו ישראל
+            # גאו ישראל – לחץ על label של "Selected Locations", הקלד Israel, לחץ לפי קואורדינטות
             try:
-                await page.click("label:has-text('Selected Locations')", timeout=5000)
-                await asyncio.sleep(1)
-                ms = page.locator('.multiselect__input').first
-                await ms.click(timeout=5000)
-                await ms.type("Israel", delay=80)
-                await asyncio.sleep(1)
-                await page.locator('.multiselect__element:has-text("Israel")').first.click(timeout=5000)
+                await page.evaluate('''() => {
+                    const radio = document.querySelector('input[type="radio"][value="countries"]');
+                    const label = document.querySelector(`label[for="${radio.id}"]`);
+                    if (label) label.click();
+                }''')
+                await asyncio.sleep(1.5)
+
+                # פוקוס ב-multiselect והקלד
+                await page.evaluate('() => { const i = Array.from(document.querySelectorAll(".multiselect__input")).find(x=>x.offsetParent); if(i) i.focus(); }')
+                await page.keyboard.type("Israel", delay=80)
+                await asyncio.sleep(2)
+
+                # לחץ על ה-option לפי קואורדינטות (Vue מגיב לזה)
+                coords = await page.evaluate('''() => {
+                    const els = Array.from(document.querySelectorAll(".multiselect__element"))
+                        .filter(e => e.offsetParent !== null && (e.innerText||"").includes("Israel"));
+                    if (els.length > 0) {
+                        const r = els[0].getBoundingClientRect();
+                        return {x: r.left + r.width/2, y: r.top + r.height/2};
+                    }
+                    return null;
+                }''')
+                if coords:
+                    await page.mouse.click(coords['x'], coords['y'])
+                    await asyncio.sleep(1)
                 logger.info("  גאו: Israel ✓")
             except Exception as e:
-                logger.warning(f"  גאו: {e}")
-                # חזור ל-Worldwide כדי לאפס את ה-multiselect
-                try:
-                    await page.click("label:has-text('Worldwide')", timeout=3000)
-                    await asyncio.sleep(1)
-                except Exception:
-                    pass
+                logger.warning(f"  גאו נכשל, נשאר Worldwide: {e}")
 
             await next_step(page)
             logger.info("שלב 1 הושלם ✓")
