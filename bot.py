@@ -11,7 +11,7 @@ from telegram.error import TelegramError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from scraper import get_products
-from message_builder import build_message, build_daily_header, build_daily_footer
+from message_builder import build_message, build_daily_footer
 from sent_tracker import load_sent, save_sent
 
 load_dotenv()
