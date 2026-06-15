@@ -3,6 +3,8 @@ import logging
 import os
 import random
 import sys
+from datetime import datetime
+import pytz
 
 import requests
 from dotenv import load_dotenv
@@ -84,6 +86,11 @@ async def send_with_retry(bot: Bot, text: str, image_url: str | None = None) -> 
 
 
 async def send_hourly_products():
+    # Guard: only send between 09:00–21:59 Israel time
+    il_time = datetime.now(pytz.timezone("Asia/Jerusalem"))
+    if not (9 <= il_time.hour <= 21):
+        logger.info(f"Outside active hours ({il_time.strftime('%H:%M')} IL) – skipping")
+        return
     logger.info(f"Using channel ID: {CHANNEL_ID} (type: {type(CHANNEL_ID).__name__})")
     """Scrape products, validate affiliate links, and post to channel."""
     logger.info("=== Hourly send started ===")
