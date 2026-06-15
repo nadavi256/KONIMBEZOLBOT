@@ -148,24 +148,38 @@ async def scrape_product_async(url: str, page) -> dict | None:
                 "li",
                 "els => els.map(e => e.innerText.trim()).filter(t => t.length > 5 && t.length < 150)"
             )
-            skip_words = ["login", "cart", "menu", "home", "search", "כל הקטגוריות", "דף הבית",
-                          "עגלה", "חיפוש", "התחבר", "הרשם", "צור קשר", "אודות", "privacy", "terms",
-                          "מוצרים לרכב", "אופנה וסטייל", "מוצרי מטבח", "ספורט וכושר",
-                          "בית וגן", "שעונים ותכשיטים", "גאדג'טים"]
-            name_lower = name.lower() if name else ""
+            skip_words = [
+                "login", "cart", "menu", "home", "search", "privacy", "terms",
+                "כל הקטגוריות", "דף הבית", "עגלה", "חיפוש", "התחבר", "הרשם",
+                "צור קשר", "אודות", "מוצרים לרכב", "אופנה וסטייל", "מוצרי מטבח",
+                "ספורט וכושר", "בית וגן", "שעונים ותכשיטים", "גאדג'טים",
+                "מוצרים למטבח", "מוצרים לבית", "מוצרים לספורט", "חזרה",
+                "קנה עכשיו", "הוסף לעגלה", "רכישה", "קניה", "מחיר"
+            ]
+            name_words = set((name or "").lower().split())
             for t in li_texts:
                 t = t.strip().replace("\n", " ")
                 cleaned = _clean_feature(t)
-                if not cleaned:
+                if not cleaned or len(cleaned) < 10:
                     continue
-                # Skip nav/breadcrumb/category items and items that are just the product name
+                # Skip nav/breadcrumb/category items
                 if any(x in cleaned for x in skip_words):
                     continue
-                if cleaned.lower() in name_lower or name_lower in cleaned.lower():
+                # Skip items that are mostly the product name
+                cleaned_words = set(cleaned.lower().split())
+                overlap = len(cleaned_words & name_words)
+                if overlap >= 3 and len(cleaned_words) <= 5:
                     continue
-                if 10 < len(cleaned) < 75:
+                # Split at comma/dash and take first meaningful part
+                for sep in ["–", "-", ",", ";"]:
+                    if sep in cleaned:
+                        parts = [p.strip() for p in cleaned.split(sep) if len(p.strip()) > 8]
+                        if parts:
+                            cleaned = parts[0]
+                            break
+                if 8 < len(cleaned) < 50:
                     features.append(cleaned)
-                if len(features) >= 6:
+                if len(features) >= 5:
                     break
         except Exception:
             pass

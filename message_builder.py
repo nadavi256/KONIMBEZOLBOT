@@ -137,15 +137,22 @@ def build_message(product: dict, index: int = 1, total: int = 1) -> str:
     feature_lines = ""
     if features:
         bullets = []
-        for f in features[:6]:
+        for f in features[:5]:
             f = f.strip().replace("/", "").replace("\\", "").replace("|", "")
             f = " ".join(f.split())
             f = f.strip(" :-–•·")
             if not f:
                 continue
-            # Keep short enough to not wrap in Telegram (Hebrew ~38 chars max)
-            if len(f) > 38:
-                f = f[:35].rsplit(" ", 1)[0] + "..."
+            # Split at natural break points to keep lines short
+            for sep in ["–", ",", ";"]:
+                if sep in f:
+                    first = f.split(sep)[0].strip()
+                    if len(first) > 8:
+                        f = first
+                        break
+            # Max 30 chars — Hebrew takes more visual space than Latin
+            if len(f) > 30:
+                f = f[:28].rsplit(" ", 1)[0] + "..."
             bullets.append(f"✅ {_e(f)}")
         feature_lines = "\n".join(bullets)
 
@@ -174,7 +181,7 @@ def build_message(product: dict, index: int = 1, total: int = 1) -> str:
     if proof_line:
         lines += [proof_line, ""]
 
-    lines.append(f"לרכישה ➡️ {link}")
+    lines.append(f'➡️ <a href="{link}">לרכישה באלי אקספרס</a>')
 
     return "\n".join(lines)
 
