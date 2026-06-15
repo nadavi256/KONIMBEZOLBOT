@@ -99,7 +99,7 @@ async def create_campaign():
                     .find(e => e.innerText && e.innerText.trim() === "In-Page Push" && e.offsetParent !== null);
                 if (match) match.click();
             }''')
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
             # כותרת
             await page.fill('#creative-title', AD_TITLE[:30])
@@ -121,28 +121,73 @@ async def create_campaign():
             else:
                 logger.warning(f"  לוגו לא נמצא: {LOGO_PATH}")
 
-            # שמור creative אם יש כפתור
-            try:
-                save = page.locator('button:has-text("Save creative"), button:has-text("Add creative")')
-                if await save.count() > 0:
-                    await save.first.click(timeout=5000)
-                    await asyncio.sleep(1)
-            except Exception:
-                pass
+            # שמור creative (חובה לפני Next!)
+            await page.evaluate('''() => {
+                const btn = Array.from(document.querySelectorAll("button"))
+                    .find(e => e.offsetParent !== null && e.innerText.includes("Save creative"));
+                if (btn) btn.click();
+            }''')
+            await asyncio.sleep(3)
+            logger.info("  Creative נשמר ✓")
 
             await next_step(page)
             logger.info("שלב 3 הושלם ✓")
 
             # ── שלב 4: Budget ─────────────────────────────────────────────────
             logger.info("שלב 4 – תקציב")
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
+
+            # בחר CPC כסוג תשלום
+            try:
+                await page.evaluate('''() => {
+                    const chat = document.getElementById("hubspot-messages-iframe-container");
+                    if (chat) chat.remove();
+                    const btn = Array.from(document.querySelectorAll("button, a, label, div"))
+                        .find(e => e.offsetParent !== null && e.innerText && e.innerText.trim() === "CPC");
+                    if (btn) btn.click();
+                }''')
+                await asyncio.sleep(2)
+                logger.info("  CPC נבחר ✓")
+            except Exception as e:
+                logger.warning(f"  CPC: {e}")
+
+            # שמור Bids (Save changes הראשון)
+            try:
+                await page.evaluate('''() => {
+                    const chat = document.getElementById("hubspot-messages-iframe-container");
+                    if (chat) chat.remove();
+                    // מצא את כפתור "Save changes" הראשון הגלוי בדף
+                    const btns = Array.from(document.querySelectorAll("button"))
+                        .filter(e => e.offsetParent !== null && e.innerText.includes("Save changes"));
+                    if (btns.length > 0) btns[0].click();
+                }''')
+                await asyncio.sleep(3)
+                logger.info("  Bids נשמרו ✓")
+            except Exception as e:
+                logger.warning(f"  Save bids: {e}")
 
             # תקציב יומי (Cappings)
             try:
                 await page.fill('#cappingform-turnover', DAILY_BUDGET)
                 logger.info(f"  תקציב יומי: ${DAILY_BUDGET} ✓")
+                await asyncio.sleep(1)
             except Exception as e:
                 logger.warning(f"  תקציב: {e}")
+
+            # שמור Cappings (Save changes השני)
+            try:
+                await page.evaluate('''() => {
+                    const chat = document.getElementById("hubspot-messages-iframe-container");
+                    if (chat) chat.remove();
+                    const btns = Array.from(document.querySelectorAll("button"))
+                        .filter(e => e.offsetParent !== null && e.innerText.includes("Save changes"));
+                    if (btns.length > 1) btns[1].click();
+                    else if (btns.length === 1) btns[0].click();
+                }''')
+                await asyncio.sleep(3)
+                logger.info("  Cappings נשמרו ✓")
+            except Exception as e:
+                logger.warning(f"  Save cappings: {e}")
 
             await next_step(page)
             logger.info("שלב 4 הושלם ✓")
@@ -152,17 +197,16 @@ async def create_campaign():
             await asyncio.sleep(2)
             await page.screenshot(path="overview.png")
 
-            # הכפתור הוא "Create a campaign" בדף Overview
-            await page.evaluate('''() => {
-                const chat = document.getElementById("hubspot-messages-iframe-container");
-                if (chat) chat.remove();
-                const btn = Array.from(document.querySelectorAll("a"))
-                    .find(e => e.innerText.trim() === "Create a campaign" && e.offsetParent !== null);
-                if (btn) btn.click();
-            }''')
+            # קח את ה-ID מה-URL ונווט ישירות לדף finalize
+            campaign_id = page.url.split("id=")[-1].split("&")[0]
+            finalize_url = f"https://adcash.myadcash.com/campaign/advanced/complete/finalize?id={campaign_id}&validate=1"
+            logger.info(f"  Finalize: {finalize_url}")
+            await page.goto(finalize_url, timeout=30000)
             await asyncio.sleep(5)
             await page.screenshot(path="campaign_created.png")
             logger.info(f"✅ קמפיין נוצר! URL: {page.url}")
+            if "dashboard" in page.url:
+                logger.info("✅ קמפיין אושר ומופיע ברשימת הקמפיינים!")
 
         except Exception as e:
             logger.error(f"שגיאה: {e}")
