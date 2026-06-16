@@ -23,20 +23,49 @@ def get_all_product_urls() -> list[str]:
         return []
 
 
-def _category_from_url(url: str) -> str:
+def _category_from_product(url: str, name: str = "") -> str:
     slug = url.split("/product/")[-1].lower()
-    if any(k in slug for k in ["shoe", "sneaker", "legging", "jacket", "dress", "skirt", "adidas", "nike", "jordan"]):
+    text = (slug + " " + name.lower())
+
+    # אופנה וסטייל
+    if any(k in text for k in ["shoe", "sneaker", "legging", "jacket", "dress", "skirt",
+                                 "adidas", "nike", "jordan", "shirt", "pants", "hoodie",
+                                 "blouse", "shorts", "swimwear", "bikini", "socks", "hat",
+                                 "cap", "bag", "purse", "underwear", "bra", "אופנה", "בגד"]):
         return "אופנה וסטייל"
-    if any(k in slug for k in ["kitchen", "garlic", "steak", "peeler", "scale", "grinder", "pepper", "kitchenaid", "vacuum", "brush", "grill"]):
-        return "מוצרי מטבח"
-    if any(k in slug for k in ["car", "obd", "freshener", "seat"]):
-        return "מוצרים לרכב"
-    if any(k in slug for k in ["yoga", "pilates", "fitness", "gym", "sport", "bike", "cycling", "jump-rope", "tennis", "volleyball", "ski", "grip", "ab-roller", "resistance", "band", "knee"]):
-        return "ספורט וכושר"
-    if any(k in slug for k in ["lamp", "light", "lock", "home", "garden", "closet", "rfid"]):
-        return "בית וגן"
-    if any(k in slug for k in ["watch", "jewelry", "necklace"]):
+
+    # שעונים ותכשיטים — לפני ספורט כי watch יכול להתבלבל
+    if any(k in text for k in ["watch", "jewelry", "necklace", "bracelet", "ring",
+                                 "earring", "pendant", "smartwatch", "שעון", "תכשיט"]):
         return "שעונים ותכשיטים"
+
+    # ספורט וכושר — חשוב: tennis/racket לפני car
+    if any(k in text for k in ["yoga", "pilates", "fitness", "gym", "sport", "bike",
+                                 "cycling", "tennis", "racket", "volleyball", "badminton",
+                                 "ski", "ab-roller", "resistance", "dumbbell", "barbell",
+                                 "jump-rope", "treadmill", "ems", "muscle", "abs",
+                                 "ספורט", "כושר", "אימון"]):
+        return "ספורט וכושר"
+
+    # מוצרים לרכב — רק מילות מפתח ברורות לרכב
+    if any(k in text for k in ["car-", "-car", "obd", "car-air", "car-seat", "car-mount",
+                                 "dashcam", "tire", "steering", "רכב"]):
+        return "מוצרים לרכב"
+
+    # מוצרי מטבח
+    if any(k in text for k in ["kitchen", "garlic", "steak", "peeler", "scale",
+                                 "grinder", "pepper", "kitchenaid", "knife", "cutting",
+                                 "chopper", "blender", "coffee", "mug", "pot", "pan",
+                                 "broom", "mop", "cleaning", "vacuum", "brush", "grill",
+                                 "מטבח", "סכין", "ניקוי", "מגב"]):
+        return "מוצרי מטבח"
+
+    # בית וגן
+    if any(k in text for k in ["lamp", "light", "lock", "home", "garden", "closet",
+                                 "rfid", "shelf", "organizer", "hanger", "hook",
+                                 "curtain", "pillow", "blanket", "בית", "גן", "מדף"]):
+        return "בית וגן"
+
     return "גאדג'טים"
 
 
@@ -199,7 +228,7 @@ async def scrape_product_async(url: str, page) -> dict | None:
             "features": features[:6],
             "aliexpress_link": ali_link,
             "image_url": image_url,
-            "category": _category_from_url(url),
+            "category": _category_from_product(url, name),
             "source_url": url,
             "orders": None,
             "rating": None,
