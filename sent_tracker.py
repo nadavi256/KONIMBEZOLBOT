@@ -16,7 +16,7 @@ HEADERS = {
     "Accept": "application/vnd.github.v3+json",
 }
 # Keep only the last N sent URLs — products can repeat after this window
-ROLLING_WINDOW = 40
+ROLLING_WINDOW = 75
 
 
 def load_sent() -> tuple[set, list]:
