@@ -96,7 +96,7 @@ async def send_hourly_products():
     logger.info("=== Hourly send started ===")
     bot = Bot(token=BOT_TOKEN)
 
-    sent_urls = load_sent()
+    sent_urls, sent_ordered = load_sent()
     logger.info(f"Already sent: {len(sent_urls)} products")
 
     try:
@@ -139,8 +139,8 @@ async def send_hourly_products():
         if i < count:
             await asyncio.sleep(random.randint(3, 7))
 
-    # Persist sent URLs
-    save_sent(sent_urls | newly_sent)
+    # Persist sent URLs (rolling window — append new ones)
+    save_sent(sent_ordered + sorted(newly_sent))
     logger.info("=== Hourly send complete ===")
 
 

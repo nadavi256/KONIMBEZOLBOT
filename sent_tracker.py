@@ -15,36 +15,40 @@ HEADERS = {
     "Authorization": f"token {GH_PAT}",
     "Accept": "application/vnd.github.v3+json",
 }
+# Keep only the last N sent URLs — products can repeat after this window
+ROLLING_WINDOW = 40
 
 
-def load_sent() -> set:
+def load_sent() -> tuple[set, list]:
+    """Returns (set of sent URLs, ordered list for rolling window)."""
     if not GH_PAT:
         logger.warning("GH_PAT not set — cannot load sent list")
-        return set()
+        return set(), []
     try:
         r = requests.get(API_URL, headers=HEADERS, timeout=10)
         if r.status_code == 404:
-            return set()
+            return set(), []
         r.raise_for_status()
         content = base64.b64decode(r.json()["content"]).decode("utf-8")
         data = json.loads(content)
         logger.info(f"Loaded {len(data)} sent URLs from GitHub")
-        return set(data)
+        return set(data), list(data)
     except Exception as e:
         logger.error(f"Failed to load sent_urls.json: {e}")
-        return set()
+        return set(), []
 
 
-def save_sent(sent: set) -> None:
+def save_sent(ordered: list) -> None:
+    """Save the rolling window list (newest last)."""
     if not GH_PAT:
         logger.warning("GH_PAT not set — cannot save sent list")
         return
     try:
+        trimmed = ordered[-ROLLING_WINDOW:]
         content_b64 = base64.b64encode(
-            json.dumps(sorted(sent), indent=2, ensure_ascii=False).encode("utf-8")
+            json.dumps(trimmed, indent=2, ensure_ascii=False).encode("utf-8")
         ).decode("utf-8")
 
-        # Get current SHA (needed for update)
         sha = None
         r = requests.get(API_URL, headers=HEADERS, timeout=10)
         if r.status_code == 200:
@@ -60,6 +64,6 @@ def save_sent(sent: set) -> None:
 
         r2 = requests.put(API_URL, headers=HEADERS, json=payload, timeout=15)
         r2.raise_for_status()
-        logger.info(f"Saved {len(sent)} sent URLs to GitHub")
+        logger.info(f"Saved {len(trimmed)} sent URLs (window={ROLLING_WINDOW})")
     except Exception as e:
         logger.error(f"Failed to save sent_urls.json: {e}")
