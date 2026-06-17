@@ -27,38 +27,22 @@ def _category_from_product(url: str, name: str = "") -> str:
     slug = url.split("/product/")[-1].lower()
     text = (slug + " " + name.lower())
 
-    # אופנה וסטייל
-    if any(k in text for k in ["shoe", "sneaker", "legging", "jacket", "dress", "skirt",
-                                 "adidas", "nike", "jordan", "shirt", "pants", "hoodie",
-                                 "blouse", "shorts", "swimwear", "bikini", "socks", "hat",
-                                 "cap", "bag", "purse", "underwear", "bra", "אופנה", "בגד"]):
-        return "אופנה וסטייל"
-
-    # שעונים ותכשיטים — לפני ספורט כי watch יכול להתבלבל
-    if any(k in text for k in ["watch", "jewelry", "necklace", "bracelet", "ring",
-                                 "earring", "pendant", "smartwatch", "שעון", "תכשיט"]):
-        return "שעונים ותכשיטים"
-
-    # ספורט וכושר — חשוב: tennis/racket לפני car
-    if any(k in text for k in ["yoga", "pilates", "fitness", "gym", "sport", "bike",
-                                 "cycling", "tennis", "racket", "volleyball", "badminton",
-                                 "ski", "ab-roller", "resistance", "dumbbell", "barbell",
-                                 "jump-rope", "treadmill", "ems", "muscle", "abs",
-                                 "ספורט", "כושר", "אימון"]):
-        return "ספורט וכושר"
-
-    # מוצרים לרכב — רק מילות מפתח ברורות לרכב
-    if any(k in text for k in ["car-", "-car", "obd", "car-air", "car-seat", "car-mount",
-                                 "dashcam", "tire", "steering", "רכב"]):
-        return "מוצרים לרכב"
-
-    # מוצרי מטבח
+    # מוצרי מטבח — לפני אופנה כדי שלא יתבלבל
     if any(k in text for k in ["kitchen", "garlic", "steak", "peeler", "scale",
                                  "grinder", "pepper", "kitchenaid", "knife", "cutting",
                                  "chopper", "blender", "coffee", "mug", "pot", "pan",
                                  "broom", "mop", "cleaning", "vacuum", "brush", "grill",
-                                 "מטבח", "סכין", "ניקוי", "מגב"]):
+                                 "bag", "storage", "food", "seal", "zipper", "container",
+                                 "freezer", "fridge", "reusable", "organiz",
+                                 "מטבח", "סכין", "ניקוי", "מגב", "אחסון", "שקית"]):
         return "מוצרי מטבח"
+
+    # אופנה וסטייל
+    if any(k in text for k in ["shoe", "sneaker", "legging", "jacket", "dress", "skirt",
+                                 "adidas", "nike", "jordan", "shirt", "pants", "hoodie",
+                                 "blouse", "shorts", "swimwear", "bikini", "socks", "hat",
+                                 "cap", "purse", "underwear", "bra", "אופנה", "בגד"]):
+        return "אופנה וסטייל"
 
     # בית וגן
     if any(k in text for k in ["lamp", "light", "lock", "home", "garden", "closet",
