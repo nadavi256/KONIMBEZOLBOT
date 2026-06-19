@@ -55,10 +55,12 @@ def _category_from_product(url: str, name: str = "") -> str:
 
     # גאדג'טים — לפני בית/מטבח כי "light" כללי מדי
     if any(k in text for k in ["flashlight", "torch", "headlamp", "led-light",
-                                 "power-bank", "charger", "cable", "usb", "bluetooth",
+                                 "power-bank", "powerbank", "power bank", "anker", "baseus",
+                                 "charger", "charging", "cable", "usb", "bluetooth",
                                  "speaker", "earphone", "headphone", "camera", "drone",
                                  "printer", "scanner", "keyboard", "mouse", "fan",
-                                 "heater", "air", "purifier", "פנס", "גאדג'ט"]):
+                                 "heater", "air", "purifier", "battery", "סוללה",
+                                 "פנס", "גאדג'ט", "טעינה"]):
         return "גאדג'טים"
 
     # מוצרי מטבח
@@ -71,14 +73,22 @@ def _category_from_product(url: str, name: str = "") -> str:
                                  "מטבח", "סכין", "ניקוי", "מגב", "שקית מזון"]):
         return "מוצרי מטבח"
 
-    # בית וגן — ספציפי, לא "light" כללי
+    # בית וגן — ספציפי, לא "home-" כללי (כדי שלא יתפוס home-charger וכד')
     if any(k in text for k in ["desk-lamp", "ceiling", "led-strip", "night-light",
-                                 "door-lock", "home-", "garden", "closet", "wardrobe",
+                                 "door-lock", "smart-home", "garden", "closet", "wardrobe",
                                  "rfid", "shelf", "hanger", "curtain", "pillow", "blanket",
-                                 "גן", "מדף", "ארון"]):
+                                 "גן", "מדף", "ארון", "וילון", "כרית"]):
         return "בית וגן"
 
     return "גאדג'טים"
+
+
+def _clean_aliexpress_url(url: str) -> str:
+    """Strip tracking params — keep only the item ID."""
+    m = re.search(r"aliexpress\.com/item/(\d+)\.html", url)
+    if m:
+        return f"https://www.aliexpress.com/item/{m.group(1)}.html"
+    return url
 
 
 def _resolve_affiliate_url(url: str) -> str | None:
@@ -87,7 +97,7 @@ def _resolve_affiliate_url(url: str) -> str | None:
         r = requests.get(url, allow_redirects=True, timeout=12, headers=HEADERS)
         final = r.url
         if "aliexpress.com/item/" in final:
-            return final
+            return _clean_aliexpress_url(final)
     except Exception:
         pass
     return None
@@ -167,6 +177,9 @@ async def scrape_product_async(url: str, page) -> dict | None:
         )
         if not ali_link:
             return None
+        # Clean long tracking URLs — keep only item ID
+        if "aliexpress.com/item/" in ali_link:
+            ali_link = _clean_aliexpress_url(ali_link)
 
         name = None
         if await page.query_selector("h1"):
