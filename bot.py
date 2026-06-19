@@ -100,8 +100,8 @@ async def send_hourly_products():
     logger.info(f"Already sent: {len(sent_urls)} products")
 
     try:
-        # Fetch more than needed so we have extras after filtering
-        candidates = await get_products(count=PRODUCTS_PER_HOUR * 8)
+        # Pass sent_urls so scraper prioritizes unseen products
+        candidates = await get_products(count=PRODUCTS_PER_HOUR * 6, exclude_urls=sent_urls)
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
         return

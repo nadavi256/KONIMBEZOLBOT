@@ -272,13 +272,21 @@ async def scrape_product_async(url: str, page) -> dict | None:
         return None
 
 
-async def get_products(count: int = 12) -> list[dict]:
+async def get_products(count: int = 12, exclude_urls: set | None = None) -> list[dict]:
     urls = get_all_product_urls()
     if not urls:
         return []
 
-    random.shuffle(urls)
-    target_urls = urls[:min(count * 3, len(urls))]
+    exclude_urls = exclude_urls or set()
+
+    # Prioritize unseen URLs, shuffle within each group
+    unseen = [u for u in urls if u not in exclude_urls]
+    seen   = [u for u in urls if u in exclude_urls]
+    random.shuffle(unseen)
+    random.shuffle(seen)
+    # Try unseen first, fall back to seen if not enough
+    target_urls = (unseen + seen)[:min(count * 4, len(urls))]
+    logger.info(f"Targeting {len(target_urls)} URLs ({len(unseen)} unseen, {len(seen)} seen)")
 
     products = []
     async with async_playwright() as p:
