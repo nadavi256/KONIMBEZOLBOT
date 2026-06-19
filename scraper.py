@@ -25,29 +25,57 @@ def get_all_product_urls() -> list[str]:
 
 def _category_from_product(url: str, name: str = "") -> str:
     slug = url.split("/product/")[-1].lower()
-    text = (slug + " " + name.lower())
+    text = slug + " " + name.lower()
 
-    # מוצרי מטבח — לפני אופנה כדי שלא יתבלבל
+    # אופנה וסטייל — ראשון, מאוד ספציפי
+    if any(k in text for k in ["legging", "shoe", "sneaker", "jacket", "dress", "skirt",
+                                 "adidas", "nike", "jordan", "shirt", "pants", "hoodie",
+                                 "blouse", "shorts", "swimwear", "bikini", "socks",
+                                 "underwear", "bra", "scrunch", "v-back", "sportswear",
+                                 "אופנה", "בגד", "טייץ", "חולצה", "מכנסיים"]):
+        return "אופנה וסטייל"
+
+    # שעונים ותכשיטים
+    if any(k in text for k in ["watch", "jewelry", "necklace", "bracelet", "ring",
+                                 "earring", "pendant", "smartwatch", "שעון", "תכשיט"]):
+        return "שעונים ותכשיטים"
+
+    # ספורט וכושר
+    if any(k in text for k in ["yoga", "pilates", "fitness", "gym", "sport", "bike",
+                                 "cycling", "tennis", "racket", "volleyball", "badminton",
+                                 "ski", "ab-roller", "resistance", "dumbbell", "barbell",
+                                 "jump-rope", "treadmill", "ems", "muscle", "abs",
+                                 "ספורט", "כושר", "אימון"]):
+        return "ספורט וכושר"
+
+    # מוצרים לרכב — מאוד ספציפי
+    if any(k in text for k in ["car-", "-car", "obd", "dashcam", "tire", "steering",
+                                 "windshield", "רכב"]):
+        return "מוצרים לרכב"
+
+    # גאדג'טים — לפני בית/מטבח כי "light" כללי מדי
+    if any(k in text for k in ["flashlight", "torch", "headlamp", "led-light",
+                                 "power-bank", "charger", "cable", "usb", "bluetooth",
+                                 "speaker", "earphone", "headphone", "camera", "drone",
+                                 "printer", "scanner", "keyboard", "mouse", "fan",
+                                 "heater", "air", "purifier", "פנס", "גאדג'ט"]):
+        return "גאדג'טים"
+
+    # מוצרי מטבח
     if any(k in text for k in ["kitchen", "garlic", "steak", "peeler", "scale",
                                  "grinder", "pepper", "kitchenaid", "knife", "cutting",
                                  "chopper", "blender", "coffee", "mug", "pot", "pan",
                                  "broom", "mop", "cleaning", "vacuum", "brush", "grill",
-                                 "bag", "storage", "food", "seal", "zipper", "container",
-                                 "freezer", "fridge", "reusable", "organiz",
-                                 "מטבח", "סכין", "ניקוי", "מגב", "אחסון", "שקית"]):
+                                 "food-storage", "food-bag", "seal", "zipper", "container",
+                                 "freezer", "fridge", "reusable-bag",
+                                 "מטבח", "סכין", "ניקוי", "מגב", "שקית מזון"]):
         return "מוצרי מטבח"
 
-    # אופנה וסטייל
-    if any(k in text for k in ["shoe", "sneaker", "legging", "jacket", "dress", "skirt",
-                                 "adidas", "nike", "jordan", "shirt", "pants", "hoodie",
-                                 "blouse", "shorts", "swimwear", "bikini", "socks", "hat",
-                                 "cap", "purse", "underwear", "bra", "אופנה", "בגד"]):
-        return "אופנה וסטייל"
-
-    # בית וגן
-    if any(k in text for k in ["lamp", "light", "lock", "home", "garden", "closet",
-                                 "rfid", "shelf", "organizer", "hanger", "hook",
-                                 "curtain", "pillow", "blanket", "בית", "גן", "מדף"]):
+    # בית וגן — ספציפי, לא "light" כללי
+    if any(k in text for k in ["desk-lamp", "ceiling", "led-strip", "night-light",
+                                 "door-lock", "home-", "garden", "closet", "wardrobe",
+                                 "rfid", "shelf", "hanger", "curtain", "pillow", "blanket",
+                                 "גן", "מדף", "ארון"]):
         return "בית וגן"
 
     return "גאדג'טים"
@@ -167,8 +195,14 @@ async def scrape_product_async(url: str, page) -> dict | None:
                 "צור קשר", "אודות", "מוצרים לרכב", "אופנה וסטייל", "מוצרי מטבח",
                 "ספורט וכושר", "בית וגן", "שעונים ותכשיטים", "גאדג'טים",
                 "מוצרים למטבח", "מוצרים לבית", "מוצרים לספורט", "חזרה",
-                "קנה עכשיו", "הוסף לעגלה", "רכישה", "קניה", "מחיר"
+                "קנה עכשיו", "הוסף לעגלה", "רכישה", "קניה", "מחיר",
+                # buying tips from website — not product features
+                "seller rating", "tracking", "מדיניות החזרים", "ביקורות האחרונות",
+                "דירוג המוכר", "בדקו את", "קראו את", "וודאו ש", "בדקו ש",
+                "המשלוח כולל", "מעקב", "החזרה"
             ]
+            # Also skip lines starting with a digit (numbered tips: "1 בדקו...")
+            BUYING_TIP_RE = re.compile(r"^\d[\s\.]")
             name_words = set((name or "").lower().split())
             for t in li_texts:
                 t = t.strip().replace("\n", " ")
@@ -177,6 +211,8 @@ async def scrape_product_async(url: str, page) -> dict | None:
                     continue
                 # Skip nav/breadcrumb/category items
                 if any(x in cleaned for x in skip_words):
+                    continue
+                if BUYING_TIP_RE.match(cleaned):
                     continue
                 # Skip items that are mostly the product name
                 cleaned_words = set(cleaned.lower().split())
