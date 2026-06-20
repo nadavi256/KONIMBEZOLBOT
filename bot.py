@@ -97,7 +97,7 @@ async def send_hourly_products():
     bot = Bot(token=BOT_TOKEN)
 
     sent_urls, sent_ordered = load_sent()
-    logger.info(f"Already sent: {len(sent_urls)} products")
+    logger.info(f"Already sent: {len(sent_urls)} products (window={30})")
 
     try:
         # Pass sent_urls so scraper prioritizes unseen products
