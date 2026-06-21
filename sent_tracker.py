@@ -31,7 +31,9 @@ def load_sent() -> tuple[set, list]:
         r.raise_for_status()
         content = base64.b64decode(r.json()["content"]).decode("utf-8")
         data = json.loads(content)
-        logger.info(f"Loaded {len(data)} sent URLs from GitHub")
+        # Trim to rolling window on load too
+        data = data[-ROLLING_WINDOW:]
+        logger.info(f"Loaded {len(data)} sent URLs from GitHub (window={ROLLING_WINDOW})")
         return set(data), list(data)
     except Exception as e:
         logger.error(f"Failed to load sent_urls.json: {e}")
