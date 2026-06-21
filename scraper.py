@@ -80,6 +80,17 @@ def _category_from_product(url: str, name: str = "") -> str:
                                  "גן", "מדף", "ארון", "וילון", "כרית"]):
         return "בית וגן"
 
+    # כלי עבודה
+    if any(k in text for k in ["drill", "soldering", "soldering-iron", "wrench", "screwdriver",
+                                 "saw", "hammer", "deko", "bosch", "stanley",
+                                 "כלי-עבודה", "מברגה", "מלחם", "מקדחה"]):
+        return "כלי עבודה"
+
+    # מוצרים לילדים
+    if any(k in text for k in ["kids", "child", "children", "baby", "toy", "toddler",
+                                 "ילד", "ילדים", "תינוק", "צעצוע"]):
+        return "מוצרים לילדים"
+
     return "גאדג'טים"
 
 

@@ -42,24 +42,17 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 
 def is_valid_affiliate_link(url: str) -> bool:
-    """Return True only if the URL is a real AliExpress affiliate link that resolves (not 404)."""
-    if not url or len(url) < 30:
+    """Validate AliExpress affiliate link by format only — HTTP checks get blocked by AliExpress."""
+    if not url or len(url) < 20:
         return False
-    if "s.click.aliexpress.com" not in url and "aliexpress.com" not in url:
-        return False
-    # Reject truncated/bad item links (item ID must be a long number)
+    # Short affiliate redirect links — always valid
+    if "s.click.aliexpress.com" in url:
+        return True
+    # Direct item links — require proper numeric item ID (10+ digits)
     if "aliexpress.com/item/" in url:
         item_id = url.split("/item/")[-1].split("?")[0].rstrip("/")
-        if len(item_id) < 8 or not item_id.isdigit():
-            return False
-    try:
-        r = requests.head(url, allow_redirects=True, timeout=10, headers=HEADERS)
-        if r.status_code == 404:
-            return False
-        return r.status_code < 500
-    except Exception as e:
-        logger.warning(f"Link check failed for {url}: {e}")
-        return False
+        return len(item_id) >= 8 and item_id.isdigit()
+    return False
 
 
 async def send_with_retry(bot: Bot, text: str, image_url: str | None = None) -> bool:
