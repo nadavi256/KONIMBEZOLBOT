@@ -284,8 +284,8 @@ async def get_products(count: int = 12, exclude_urls: set | None = None) -> list
     seen   = [u for u in urls if u in exclude_urls]
     random.shuffle(unseen)
     random.shuffle(seen)
-    # Try unseen first, fall back to seen if not enough
-    target_urls = (unseen + seen)[:min(count * 4, len(urls))]
+    # Scan ALL unseen URLs first, then fall back to seen if not enough
+    target_urls = unseen + seen
     logger.info(f"Targeting {len(target_urls)} URLs ({len(unseen)} unseen, {len(seen)} seen)")
 
     products = []
