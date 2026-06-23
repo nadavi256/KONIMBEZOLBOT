@@ -1,0 +1,33 @@
+name: Daily Deal Report - 23:00 IL
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 23:00 Israel time = 20:00 UTC (UTC+3)
+    - cron: '0 20 * * *'
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install python-telegram-bot==20.7 pytz requests python-dotenv
+
+      - name: Send daily report
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          REPORT_CHAT_ID: ${{ secrets.REPORT_CHAT_ID }}
+          TELEGRAM_CHANNEL_ID: "-1002004379375"
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: python report.py

@@ -15,6 +15,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from scraper import get_products
 from message_builder import build_message, build_daily_footer
 from sent_tracker import load_sent, save_sent
+from daily_log import log_product
 
 load_dotenv()
 
@@ -132,6 +133,7 @@ async def send_hourly_products():
         logger.info(f"{'✅' if ok else '❌'} [{i}/{count}] {product['name'][:55]}")
         if ok:
             newly_sent.add(product["source_url"])
+            log_product(product)
         if i < count:
             await asyncio.sleep(random.randint(3, 7))
 
