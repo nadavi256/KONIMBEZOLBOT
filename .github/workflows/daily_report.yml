@@ -27,8 +27,6 @@ jobs:
       - name: Build report
         id: report
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHANNEL_ID: "-1002004379375"
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           python report.py --output-file /tmp/report.txt

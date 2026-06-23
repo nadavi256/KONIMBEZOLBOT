@@ -8,7 +8,6 @@ from datetime import datetime
 
 import pytz
 from dotenv import load_dotenv
-from telegram import Bot
 
 from daily_log import load_today
 
@@ -21,8 +20,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-REPORT_CHAT_ID = os.environ.get("REPORT_CHAT_ID", os.environ.get("TELEGRAM_CHANNEL_ID", ""))
 IL_TZ = pytz.timezone("Asia/Jerusalem")
 
 CATEGORY_EMOJIS = {
@@ -129,17 +126,7 @@ async def send_report(output_file: str | None = None):
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(plain)
         logger.info(f"Report written to {output_file}")
-
-    # Also send HTML version to Telegram if REPORT_CHAT_ID is set
-    if REPORT_CHAT_ID:
-        html_text = build_report_html(entries)
-        bot = Bot(token=BOT_TOKEN)
-        await bot.send_message(
-            chat_id=int(REPORT_CHAT_ID),
-            text=html_text,
-            parse_mode="HTML",
-        )
-        logger.info("Daily report sent to Telegram.")
+    # Telegram send removed — report goes to email only (nadavi256@gmail.com)
 
 
 if __name__ == "__main__":
