@@ -24,10 +24,24 @@ jobs:
       - name: Install dependencies
         run: pip install python-telegram-bot==20.7 pytz requests python-dotenv
 
-      - name: Send daily report
+      - name: Build report
+        id: report
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          REPORT_CHAT_ID: ${{ secrets.REPORT_CHAT_ID }}
           TELEGRAM_CHANNEL_ID: "-1002004379375"
           GH_PAT: ${{ secrets.GH_PAT }}
-        run: python report.py
+        run: |
+          python report.py --output-file /tmp/report.txt
+
+      - name: Send email report
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: nadavi256@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "📊 דוח דילים יומי — KonimBezol"
+          to: nadavi256@gmail.com
+          from: KonimBezol Bot <nadavi256@gmail.com>
+          body: file:///tmp/report.txt
+          content_type: text/plain; charset=utf-8
