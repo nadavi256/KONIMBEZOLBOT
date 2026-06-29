@@ -308,25 +308,23 @@ async def get_products(count: int = 12, exclude_urls: set | None = None) -> list
         )
         page = await ctx.new_page()
 
+        new_found = 0
         for url in target_urls:
+            is_unseen = url not in exclude_urls
+            # Stop only when we have enough AND we've moved past all unseen URLs
+            if len(products) >= count and not is_unseen:
+                break
+
             product = await scrape_product_async(url, page)
             if product:
-                # Try to get AliExpress stats
-                real_url = _resolve_affiliate_url(product["aliexpress_link"])
-                if real_url:
-                    stats = await _get_aliexpress_stats(real_url, page)
-                    product["orders"] = stats["orders"]
-                    product["rating"] = stats["rating"]
-                    # Navigate back after AliExpress scrape
-                    try:
-                        await page.go_back(timeout=5000)
-                    except Exception:
-                        pass
-
+                is_new = product["source_url"] not in exclude_urls
+                tag = "🆕 NEW" if is_new else "♻️ recycled"
                 products.append(product)
-                logger.info(f"  ✓ {product['name'][:55]} | orders={product['orders']} rating={product['rating']}")
-            if len(products) >= count:
-                break
+                if is_new:
+                    new_found += 1
+                logger.info(f"  {tag} {product['name'][:50]}")
+
+        logger.info(f"Collected {len(products)} products ({new_found} new, {len(products)-new_found} recycled)")
 
         await browser.close()
 
