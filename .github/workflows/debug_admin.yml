@@ -1,0 +1,27 @@
+name: Debug Admin Page (one-time)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Cache Playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('requirements.txt') }}
+      - run: pip install -r requirements.txt
+      - name: Install browser deps
+        run: playwright install-deps chromium
+      - name: Install browser (if not cached)
+        run: playwright install chromium
+      - name: Run debug
+        run: python debug_admin.py
