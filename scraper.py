@@ -39,7 +39,9 @@ async def get_all_product_urls_from_admin(page) -> list[str]:
             "els => [...new Set(els.map(e => e.href))].filter(h => h.includes('/product/'))"
         )
         if links:
-            logger.info(f"Admin page: found {len(links)} product URLs (date-sorted)")
+            # Admin page is oldest-first — reverse to get newest first
+            links = list(reversed(links))
+            logger.info(f"Admin page: found {len(links)} product URLs (newest first)")
             return links
     except Exception as e:
         logger.warning(f"Admin page scrape failed: {e}")
