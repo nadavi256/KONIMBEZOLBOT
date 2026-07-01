@@ -10,32 +10,34 @@ SITE_URL = "https://konimbezol.co.il"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 
-def get_all_product_urls_from_sitemap() -> list[str]:
-    """Fetch sitemap, parse <lastmod> dates, return URLs sorted newest-first."""
+PRODUCTS_API = "https://izccquugsnfixxtvhxcj.supabase.co/functions/v1/products-by-date"
+
+
+def get_all_product_urls_from_api() -> list[str]:
+    """Fetch products from Supabase API, newest first (real creation dates)."""
     try:
-        r = requests.get(f"{SITE_URL}/sitemap.xml", timeout=15)
-        # Extract (url, date) pairs
-        entries = re.findall(
-            r"<loc>(https://konimbezol\.co\.il/product/[^<]+)</loc>\s*<lastmod>([^<]+)</lastmod>",
-            r.text
-        )
-        if entries:
-            # Sort by date string descending (ISO dates sort lexicographically)
-            entries.sort(key=lambda x: x[1], reverse=True)
-            urls = [e[0] for e in entries]
-            logger.info(f"Sitemap: {len(urls)} products sorted by date, newest={entries[0][1]}")
+        r = requests.get(PRODUCTS_API, timeout=15, headers=HEADERS)
+        r.raise_for_status()
+        data = r.json()
+        urls = [item["url"] for item in data if item.get("url")]
+        if urls:
+            logger.info(f"API: {len(urls)} products, newest first (date-ordered)")
             return urls
-        # Fallback: no dates found — return unsorted
-        urls = re.findall(r"<loc>(https://konimbezol\.co\.il/product/[^<]+)</loc>", r.text)
-        logger.info(f"Sitemap: {len(urls)} products (no dates)")
-        return urls
     except Exception as e:
-        logger.error(f"Sitemap fetch failed: {e}")
+        logger.error(f"Products API failed: {e}")
+    # Fallback: sitemap (no date ordering)
+    try:
+        r = requests.get(f"{SITE_URL}/sitemap.xml", timeout=15, headers=HEADERS)
+        urls = re.findall(r"<loc>(https://konimbezol\.co\.il/product/[^<]+)</loc>", r.text)
+        logger.warning(f"Fallback to sitemap: {len(urls)} products (no date order)")
+        return urls
+    except Exception as e2:
+        logger.error(f"Sitemap fallback also failed: {e2}")
         return []
 
 
 def get_all_product_urls() -> list[str]:
-    return get_all_product_urls_from_sitemap()
+    return get_all_product_urls_from_api()
 
 
 def _category_from_product(url: str, name: str = "") -> str:
@@ -312,7 +314,7 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
         )
         page = await ctx.new_page()
 
-        all_urls = get_all_product_urls_from_sitemap()
+        all_urls = get_all_product_urls_from_api()
 
         if not all_urls:
             await browser.close()

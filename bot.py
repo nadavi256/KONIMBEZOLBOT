@@ -145,12 +145,12 @@ async def send_hourly_products():
     # Persist sent URLs (rolling window — append new ones)
     save_sent(sent_ordered + sorted(newly_sent))
 
-    # Update seen_ever with all products seen in this run's sitemap
-    from scraper import get_all_product_urls_from_sitemap
-    all_sitemap = set(get_all_product_urls_from_sitemap())
-    if all_sitemap - seen_ever:
-        logger.info(f"Adding {len(all_sitemap - seen_ever)} new URLs to seen_ever")
-        save_seen_ever(seen_ever | all_sitemap)
+    # Update seen_ever with all products from this run's API response
+    from scraper import get_all_product_urls_from_api
+    all_api = set(get_all_product_urls_from_api())
+    if all_api - seen_ever:
+        logger.info(f"Adding {len(all_api - seen_ever)} new URLs to seen_ever")
+        save_seen_ever(seen_ever | all_api)
     logger.info("=== Hourly send complete ===")
 
 
