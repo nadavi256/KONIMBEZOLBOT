@@ -10,51 +10,24 @@ SITE_URL = "https://konimbezol.co.il"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 
-ADMIN_URL = "https://konimbezol.co.il/admin/all-deals"
-ADMIN_USER = "nadavi256"
-ADMIN_PASS = "Nadavi256!0526732399"
-
-
-async def get_all_product_urls_from_admin(page) -> list[str]:
-    """Scrape admin page to get ALL product URLs sorted by date (newest first)."""
-    try:
-        await page.goto(ADMIN_URL, wait_until="networkidle", timeout=20000)
-        await page.wait_for_timeout(1500)
-
-        # Login if needed
-        pwd_input = await page.query_selector("input[type='password']")
-        if pwd_input:
-            for sel in ["input[type='email']", "input[type='text']", "input[name='username']"]:
-                el = await page.query_selector(sel)
-                if el:
-                    await el.fill(ADMIN_USER)
-                    break
-            await pwd_input.fill(ADMIN_PASS)
-            await page.keyboard.press("Enter")
-            await page.wait_for_timeout(2500)
-
-        # Extract product links in DOM order (= date order from admin page)
-        links = await page.eval_on_selector_all(
-            "a[href*='/product/']",
-            "els => [...new Set(els.map(e => e.href))].filter(h => h.includes('/product/'))"
-        )
-        if links:
-            # Admin page is oldest-first — reverse to get newest first
-            links = list(reversed(links))
-            logger.info(f"Admin page: found {len(links)} product URLs (newest first)")
-            return links
-    except Exception as e:
-        logger.warning(f"Admin page scrape failed: {e}")
-    return []
-
-
 def get_all_product_urls_from_sitemap() -> list[str]:
+    """Fetch sitemap, parse <lastmod> dates, return URLs sorted newest-first."""
     try:
         r = requests.get(f"{SITE_URL}/sitemap.xml", timeout=15)
-        urls = re.findall(
-            r"<loc>(https://konimbezol\.co\.il/product/[^<]+)</loc>", r.text
+        # Extract (url, date) pairs
+        entries = re.findall(
+            r"<loc>(https://konimbezol\.co\.il/product/[^<]+)</loc>\s*<lastmod>([^<]+)</lastmod>",
+            r.text
         )
-        logger.info(f"Sitemap: found {len(urls)} product URLs")
+        if entries:
+            # Sort by date string descending (ISO dates sort lexicographically)
+            entries.sort(key=lambda x: x[1], reverse=True)
+            urls = [e[0] for e in entries]
+            logger.info(f"Sitemap: {len(urls)} products sorted by date, newest={entries[0][1]}")
+            return urls
+        # Fallback: no dates found — return unsorted
+        urls = re.findall(r"<loc>(https://konimbezol\.co\.il/product/[^<]+)</loc>", r.text)
+        logger.info(f"Sitemap: {len(urls)} products (no dates)")
         return urls
     except Exception as e:
         logger.error(f"Sitemap fetch failed: {e}")
@@ -62,7 +35,6 @@ def get_all_product_urls_from_sitemap() -> list[str]:
 
 
 def get_all_product_urls() -> list[str]:
-    """Sync wrapper using sitemap (fallback). Admin page is used async in get_products."""
     return get_all_product_urls_from_sitemap()
 
 
@@ -338,20 +310,14 @@ async def get_products(count: int = 12, exclude_urls: set | None = None) -> list
         )
         page = await ctx.new_page()
 
-        # Try admin page first (date-sorted, newest first)
-        admin_urls = await get_all_product_urls_from_admin(page)
-        if admin_urls:
-            all_urls = admin_urls
-        else:
-            # Fallback: sitemap (no guaranteed date order)
-            all_urls = get_all_product_urls_from_sitemap()
+        # Sitemap sorted newest-first by <lastmod> date
+        all_urls = get_all_product_urls_from_sitemap()
 
         if not all_urls:
             await browser.close()
             return []
 
-        # Admin page is already newest-first — keep that order for unseen
-        # Seen URLs go to the end (shuffled) as fallback
+        # Unseen: kept in date order (newest first). Seen: shuffled as fallback.
         unseen = [u for u in all_urls if u not in exclude_urls]
         seen   = [u for u in all_urls if u in exclude_urls]
         random.shuffle(seen)  # seen order doesn't matter, shuffle for variety
