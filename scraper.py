@@ -298,8 +298,10 @@ async def scrape_product_async(url: str, page) -> dict | None:
         return None
 
 
-async def get_products(count: int = 12, exclude_urls: set | None = None) -> list[dict]:
+async def get_products(count: int = 12, exclude_urls: set | None = None,
+                       seen_ever: set | None = None) -> list[dict]:
     exclude_urls = exclude_urls or set()
+    seen_ever = seen_ever or set()
 
     products = []
     async with async_playwright() as p:
@@ -310,33 +312,46 @@ async def get_products(count: int = 12, exclude_urls: set | None = None) -> list
         )
         page = await ctx.new_page()
 
-        # Sitemap sorted newest-first by <lastmod> date
         all_urls = get_all_product_urls_from_sitemap()
 
         if not all_urls:
             await browser.close()
             return []
 
-        # Unseen: kept in date order (newest first). Seen: shuffled as fallback.
-        unseen = [u for u in all_urls if u not in exclude_urls]
-        seen   = [u for u in all_urls if u in exclude_urls]
-        random.shuffle(seen)  # seen order doesn't matter, shuffle for variety
-        target_urls = unseen + seen  # unseen kept in date order (newest first)
-        logger.info(f"Targeting {len(target_urls)} URLs ({len(unseen)} unseen/new, {len(seen)} seen/recycled)")
+        # Three-tier priority:
+        # 1. truly_new: never seen in any sitemap before → added to site after bot started
+        # 2. unseen:    seen before but not in recent sent window
+        # 3. recycled:  in sent window (recently sent) — shuffled as last resort
+        truly_new = [u for u in all_urls if u not in seen_ever and u not in exclude_urls]
+        unseen    = [u for u in all_urls if u in seen_ever and u not in exclude_urls]
+        recycled  = [u for u in all_urls if u in exclude_urls]
+        random.shuffle(recycled)
+        target_urls = truly_new + unseen + recycled
 
+        logger.info(
+            f"Priority queue: {len(truly_new)} truly-new | "
+            f"{len(unseen)} unseen | {len(recycled)} recycled"
+        )
+
+        truly_new_set = set(truly_new)
         new_found = 0
         for url in target_urls:
-            is_unseen = url not in exclude_urls
-            # Stop only when we have enough AND we've moved past all unseen URLs
-            if len(products) >= count and not is_unseen:
+            is_priority = url not in exclude_urls  # truly_new or unseen
+            # Stop only when we have enough AND we've moved past priority URLs
+            if len(products) >= count and not is_priority:
                 break
 
             product = await scrape_product_async(url, page)
             if product:
-                is_new = product["source_url"] not in exclude_urls
-                tag = "🆕 NEW" if is_new else "♻️ recycled"
+                src = product["source_url"]
+                if src in truly_new_set:
+                    tag = "🌟 BRAND NEW"
+                elif src not in exclude_urls:
+                    tag = "🆕 unseen"
+                else:
+                    tag = "♻️ recycled"
                 products.append(product)
-                if is_new:
+                if src not in exclude_urls:
                     new_found += 1
                 logger.info(f"  {tag} {product['name'][:50]}")
 

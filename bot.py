@@ -15,6 +15,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from scraper import get_products
 from message_builder import build_message, build_daily_footer
 from sent_tracker import load_sent, save_sent
+from known_tracker import load_seen_ever, save_seen_ever
 from daily_log import log_product
 
 load_dotenv()
@@ -94,11 +95,15 @@ async def send_hourly_products():
     bot = Bot(token=BOT_TOKEN)
 
     sent_urls, sent_ordered = load_sent()
-    logger.info(f"Already sent: {len(sent_urls)} products (window={30})")
+    seen_ever = load_seen_ever()
+    logger.info(f"Sent window: {len(sent_urls)} | Known ever: {len(seen_ever)}")
 
     try:
-        # Pass sent_urls so scraper prioritizes unseen products
-        candidates = await get_products(count=PRODUCTS_PER_HOUR * 6, exclude_urls=sent_urls)
+        candidates = await get_products(
+            count=PRODUCTS_PER_HOUR * 6,
+            exclude_urls=sent_urls,
+            seen_ever=seen_ever,
+        )
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
         return
@@ -139,6 +144,13 @@ async def send_hourly_products():
 
     # Persist sent URLs (rolling window — append new ones)
     save_sent(sent_ordered + sorted(newly_sent))
+
+    # Update seen_ever with all products seen in this run's sitemap
+    from scraper import get_all_product_urls_from_sitemap
+    all_sitemap = set(get_all_product_urls_from_sitemap())
+    if all_sitemap - seen_ever:
+        logger.info(f"Adding {len(all_sitemap - seen_ever)} new URLs to seen_ever")
+        save_seen_ever(seen_ever | all_sitemap)
     logger.info("=== Hourly send complete ===")
 
 
