@@ -68,6 +68,7 @@
   .cat--watch      { --cat: #eab308; }
   .cat--tools      { --cat: #f97316; }
   .cat--kids       { --cat: #a855f7; }
+  .cat--special    { --cat: #14b8a6; }
 
   /* ── Reset ── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -456,7 +457,7 @@
       <div class="kpi">
         <div class="kpi-label">קטגוריות פעילות</div>
         <div class="kpi-value" id="kpi-cats">—</div>
-        <div class="kpi-sub">מתוך 9 קטגוריות</div>
+        <div class="kpi-sub">מתוך 10 קטגוריות</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">חלון שנשלח</div>
@@ -529,13 +530,14 @@ function toggleTheme() {
 const CATS = {
   'גאדג\'טים':        { emoji: '📱', cls: 'cat--gadget',  color: '#3b82f6' },
   'אופנה וסטייל':    { emoji: '👗', cls: 'cat--fashion', color: '#ec4899' },
-  'ספורט וכושר':     { emoji: '🏋️', cls: 'cat--sport',   color: '#10b981' },
+  'ספורט וכושר':     { emoji: '💪', cls: 'cat--sport',   color: '#10b981' },
   'מוצרי מטבח':      { emoji: '🍳', cls: 'cat--kitchen', color: '#f59e0b' },
   'מוצרים לרכב':     { emoji: '🚗', cls: 'cat--car',     color: '#6366f1' },
-  'בית וגן':          { emoji: '🌿', cls: 'cat--home',    color: '#84cc16' },
+  'בית וגן':          { emoji: '🏠', cls: 'cat--home',    color: '#84cc16' },
   'שעונים ותכשיטים': { emoji: '⌚', cls: 'cat--watch',   color: '#eab308' },
   'כלי עבודה':        { emoji: '🔧', cls: 'cat--tools',   color: '#f97316' },
-  'מוצרים לילדים':   { emoji: '🧸', cls: 'cat--kids',    color: '#a855f7' },
+  'מוצרים לילדים':   { emoji: '🎁', cls: 'cat--kids',    color: '#a855f7' },
+  'מוצר מומלץ':      { emoji: '⭐', cls: 'cat--special', color: '#14b8a6' },
 };
 function catMeta(cat) {
   return CATS[cat] || { emoji: '📦', cls: '', color: '#3b82f6' };
