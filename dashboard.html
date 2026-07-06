@@ -234,6 +234,8 @@ canvas { display: block; width: 100% !important; }
   </div>
   <div class="header-right">
     <div class="status-dot">בוט פעיל</div>
+    <span id="last-updated" style="font-size:.74rem;color:var(--ink-3);"></span>
+    <button class="theme-toggle" id="refresh-btn" onclick="manualRefresh()">↻ רענן</button>
     <button class="theme-toggle" onclick="toggleTheme()">◐ ערכת נושא</button>
   </div>
 </header>
@@ -689,5 +691,47 @@ window.addEventListener('resize', () => {
   _resizeTimer = setTimeout(() => drawChart(window._byDate||{}), 180);
 });
 
+// ── Auto-refresh ──────────────────────────────────────────────────────
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+function updateLastUpdated() {
+  const el = document.getElementById('last-updated');
+  if (!el) return;
+  const now = new Date();
+  el.textContent = `עודכן: ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+function setRefreshCountdown() {
+  let remaining = REFRESH_INTERVAL / 1000;
+  const btn = document.getElementById('refresh-btn');
+  clearInterval(window._countdownTimer);
+  window._countdownTimer = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) { remaining = REFRESH_INTERVAL / 1000; }
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    if (btn) btn.title = `רענון אוטומטי בעוד ${mins}:${pad(secs)}`;
+  }, 1000);
+}
+
+async function manualRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn) { btn.textContent = '⟳ טוען…'; btn.disabled = true; }
+  await init();
+  if (btn) { btn.textContent = '↻ רענן'; btn.disabled = false; }
+  setRefreshCountdown();
+}
+
+// Wrap init to update timestamp after load
+const _initOrig = init;
+window.init = async function() {
+  await _initOrig();
+  updateLastUpdated();
+};
+
+// Start auto-refresh loop
+setInterval(() => init().then(updateLastUpdated), REFRESH_INTERVAL);
+
 init();
+setRefreshCountdown();
 </script>
