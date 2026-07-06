@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 import requests
@@ -65,7 +65,6 @@ def log_product(product: dict) -> None:
     entries, sha = _get_file()
     today = _today_il()
     # Keep last 30 days of history
-    from datetime import datetime, timedelta
     cutoff = (datetime.now(IL_TZ) - timedelta(days=30)).strftime("%Y-%m-%d")
     entries = [e for e in entries if e.get("date", "") >= cutoff]
     entries.append({
