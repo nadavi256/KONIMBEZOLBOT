@@ -64,8 +64,10 @@ def log_product(product: dict) -> None:
     """Append one product to today's daily log."""
     entries, sha = _get_file()
     today = _today_il()
-    # Keep only today's entries
-    entries = [e for e in entries if e.get("date") == today]
+    # Keep last 30 days of history
+    from datetime import datetime, timedelta
+    cutoff = (datetime.now(IL_TZ) - timedelta(days=30)).strftime("%Y-%m-%d")
+    entries = [e for e in entries if e.get("date", "") >= cutoff]
     entries.append({
         "date": today,
         "time": datetime.now(IL_TZ).strftime("%H:%M"),
