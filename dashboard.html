@@ -1,580 +1,424 @@
 <title>Konimbezol Bot — לוח בקרה</title>
 <style>
-  /* ── Tokens ── */
-  :root {
-    --ground:   #f2f5fb;
-    --surface:  #ffffff;
-    --surface2: #f8faff;
-    --border:   #e2e7f4;
-    --ink-1:    #0f172a;
-    --ink-2:    #475569;
-    --ink-3:    #94a3b8;
-    --accent:   #2563eb;
-    --accent-h: #1d4ed8;
-    --success:  #16a34a;
-    --warning:  #d97706;
-    --danger:   #dc2626;
-    --radius:   10px;
-    --font:     -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --mono:     'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-    --shadow:   0 1px 3px rgba(15,23,42,.07), 0 1px 2px rgba(15,23,42,.04);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --ground:   #090d18;
-      --surface:  #111827;
-      --surface2: #151e30;
-      --border:   #1e293b;
-      --ink-1:    #f1f5f9;
-      --ink-2:    #94a3b8;
-      --ink-3:    #475569;
-      --accent:   #3b82f6;
-      --accent-h: #60a5fa;
-      --shadow:   0 1px 3px rgba(0,0,0,.3);
-    }
-  }
-  :root[data-theme="dark"] {
-    --ground:   #090d18;
-    --surface:  #111827;
-    --surface2: #151e30;
-    --border:   #1e293b;
-    --ink-1:    #f1f5f9;
-    --ink-2:    #94a3b8;
-    --ink-3:    #475569;
-    --accent:   #3b82f6;
-    --accent-h: #60a5fa;
-    --shadow:   0 1px 3px rgba(0,0,0,.3);
-  }
-  :root[data-theme="light"] {
-    --ground:   #f2f5fb;
-    --surface:  #ffffff;
-    --surface2: #f8faff;
-    --border:   #e2e7f4;
-    --ink-1:    #0f172a;
-    --ink-2:    #475569;
-    --ink-3:    #94a3b8;
-    --accent:   #2563eb;
-    --accent-h: #1d4ed8;
-    --shadow:   0 1px 3px rgba(15,23,42,.07);
-  }
+:root {
+  --ground:   #f2f5fb;
+  --surface:  #ffffff;
+  --surface2: #f8faff;
+  --border:   #e2e7f4;
+  --ink-1:    #0f172a;
+  --ink-2:    #475569;
+  --ink-3:    #94a3b8;
+  --accent:   #2563eb;
+  --accent-h: #1d4ed8;
+  --success:  #16a34a;
+  --warning:  #d97706;
+  --danger:   #dc2626;
+  --repeat:   #dc2626;
+  --radius:   10px;
+  --font:     -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono:     'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  --shadow:   0 1px 3px rgba(15,23,42,.07), 0 1px 2px rgba(15,23,42,.04);
+}
+@media (prefers-color-scheme: dark) { :root {
+  --ground: #090d18; --surface: #111827; --surface2: #151e30; --border: #1e293b;
+  --ink-1: #f1f5f9; --ink-2: #94a3b8; --ink-3: #475569;
+  --accent: #3b82f6; --accent-h: #60a5fa;
+  --shadow: 0 1px 3px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"] {
+  --ground: #090d18; --surface: #111827; --surface2: #151e30; --border: #1e293b;
+  --ink-1: #f1f5f9; --ink-2: #94a3b8; --ink-3: #475569;
+  --accent: #3b82f6; --accent-h: #60a5fa;
+  --shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+:root[data-theme="light"] {
+  --ground: #f2f5fb; --surface: #ffffff; --surface2: #f8faff; --border: #e2e7f4;
+  --ink-1: #0f172a; --ink-2: #475569; --ink-3: #94a3b8;
+  --accent: #2563eb; --accent-h: #1d4ed8;
+  --shadow: 0 1px 3px rgba(15,23,42,.07);
+}
 
-  /* Category colors */
-  .cat--gadget     { --cat: #3b82f6; }
-  .cat--fashion    { --cat: #ec4899; }
-  .cat--sport      { --cat: #10b981; }
-  .cat--kitchen    { --cat: #f59e0b; }
-  .cat--car        { --cat: #6366f1; }
-  .cat--home       { --cat: #84cc16; }
-  .cat--watch      { --cat: #eab308; }
-  .cat--tools      { --cat: #f97316; }
-  .cat--kids       { --cat: #a855f7; }
-  .cat--special    { --cat: #14b8a6; }
+.cat--gadget  { --cat: #3b82f6; }
+.cat--fashion { --cat: #ec4899; }
+.cat--sport   { --cat: #10b981; }
+.cat--kitchen { --cat: #f59e0b; }
+.cat--car     { --cat: #6366f1; }
+.cat--home    { --cat: #84cc16; }
+.cat--watch   { --cat: #eab308; }
+.cat--tools   { --cat: #f97316; }
+.cat--kids    { --cat: #a855f7; }
+.cat--special { --cat: #14b8a6; }
 
-  /* ── Reset ── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { font-size: 15px; }
-  body {
-    font-family: var(--font);
-    background: var(--ground);
-    color: var(--ink-1);
-    line-height: 1.5;
-    min-height: 100vh;
-  }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { color: var(--accent-h); text-decoration: underline; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: var(--font); background: var(--ground); color: var(--ink-1); line-height: 1.5; min-height: 100vh; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font-family: var(--font); cursor: pointer; }
 
-  /* ── Layout ── */
-  .app { display: flex; flex-direction: column; min-height: 100vh; }
+/* Header */
+header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 24px; display: flex; align-items: center;
+  justify-content: space-between; height: 56px;
+  position: sticky; top: 0; z-index: 10;
+}
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.logo {
+  width: 30px; height: 30px; background: var(--accent); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: #fff; font-weight: 700;
+}
+.header-brand h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; }
+.header-brand span { font-size: .8rem; color: var(--ink-3); font-weight: 400; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.status-dot { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--ink-2); }
+.status-dot::before {
+  content: ''; display: block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--success); box-shadow: 0 0 0 2px rgba(22,163,74,.2);
+}
+.theme-toggle {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 8px; color: var(--ink-2); font-size: .8rem;
+}
+.theme-toggle:hover { background: var(--surface2); }
 
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 56px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .header-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .header-brand .logo {
-    width: 30px;
-    height: 30px;
-    background: var(--accent);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    color: #fff;
-    font-weight: 700;
-  }
-  .header-brand h1 {
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--ink-1);
-  }
-  .header-brand span {
-    font-size: .8rem;
-    color: var(--ink-3);
-    font-weight: 400;
-  }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .status-dot {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: .8rem;
-    color: var(--ink-2);
-  }
-  .status-dot::before {
-    content: '';
-    display: block;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--success);
-    box-shadow: 0 0 0 2px rgba(22,163,74,.2);
-  }
-  .theme-toggle {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 8px;
-    cursor: pointer;
-    color: var(--ink-2);
-    font-size: .8rem;
-    font-family: var(--font);
-  }
-  .theme-toggle:hover { background: var(--surface2); }
+/* Layout */
+main { max-width: 1200px; width: 100%; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
 
-  main {
-    flex: 1;
-    max-width: 1200px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
+/* KPIs */
+.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow);
+}
+.kpi.kpi-warn { border-color: rgba(220,38,38,.3); }
+.kpi-label {
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ink-3); font-weight: 600; margin-bottom: 8px;
+}
+.kpi-value {
+  font-size: 2rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--ink-1); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.kpi-value.accent { color: var(--accent); }
+.kpi-value.danger { color: var(--danger); }
+.kpi-sub { font-size: .75rem; color: var(--ink-3); margin-top: 4px; }
 
-  /* ── KPI tiles ── */
-  .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-  }
-  .kpi {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px 20px;
-    box-shadow: var(--shadow);
-  }
-  .kpi-label {
-    font-size: .75rem;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--ink-3);
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-  .kpi-value {
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    color: var(--ink-1);
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-  }
-  .kpi-value.accent { color: var(--accent); }
-  .kpi-sub {
-    font-size: .75rem;
-    color: var(--ink-3);
-    margin-top: 4px;
-  }
+/* Repeats alert panel */
+.repeats-panel {
+  background: var(--surface); border: 1px solid rgba(220,38,38,.25);
+  border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+}
+.repeats-panel.hidden { display: none; }
+.repeats-header {
+  padding: 12px 18px; border-bottom: 1px solid rgba(220,38,38,.15);
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(220,38,38,.04);
+}
+.repeats-title { font-size: .85rem; font-weight: 600; color: var(--danger); }
+.repeats-sub { font-size: .75rem; color: var(--ink-3); }
+.repeats-body { padding: 4px 0; }
 
-  /* ── Content grid ── */
-  .content-grid {
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 16px;
-    align-items: start;
-  }
+/* Repeat item */
+.repeat-item {
+  display: flex; gap: 12px; padding: 10px 18px;
+  border-bottom: 1px solid var(--border); align-items: flex-start;
+}
+.repeat-item:last-child { border-bottom: none; }
+.repeat-badge {
+  font-size: .68rem; font-weight: 700; padding: 2px 7px;
+  border-radius: 20px; background: rgba(220,38,38,.1);
+  color: var(--danger); white-space: nowrap; flex-shrink: 0;
+}
+.repeat-name { font-size: .85rem; font-weight: 500; color: var(--ink-1); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repeat-dates { font-size: .72rem; color: var(--ink-3); white-space: nowrap; }
 
-  /* ── Panel shared ── */
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-  }
-  .panel-header {
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .panel-title {
-    font-size: .85rem;
-    font-weight: 600;
-    color: var(--ink-1);
-  }
-  .panel-meta {
-    font-size: .75rem;
-    color: var(--ink-3);
-  }
-  .panel-body { padding: 4px 0; }
+/* Content grid */
+.content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.panel-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-title { font-size: .85rem; font-weight: 600; }
+.panel-meta { font-size: .75rem; color: var(--ink-3); }
+.panel-body { padding: 4px 0; }
 
-  /* ── Deal feed ── */
-  .deal-item {
-    display: flex;
-    gap: 12px;
-    padding: 10px 18px;
-    border-bottom: 1px solid var(--border);
-    align-items: flex-start;
-    transition: background .1s;
-  }
-  .deal-item:last-child { border-bottom: none; }
-  .deal-item:hover { background: var(--surface2); }
+/* Deal feed */
+.deal-item { display: flex; gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--border); align-items: flex-start; transition: background .1s; }
+.deal-item:last-child { border-bottom: none; }
+.deal-item:hover { background: var(--surface2); }
+.deal-item.is-repeat { background: rgba(220,38,38,.03); }
+.deal-time { font-family: var(--mono); font-size: .72rem; color: var(--ink-3); white-space: nowrap; padding-top: 2px; min-width: 40px; font-variant-numeric: tabular-nums; }
+.deal-bar { width: 3px; border-radius: 2px; background: var(--cat, var(--accent)); flex-shrink: 0; align-self: stretch; min-height: 36px; }
+.deal-info { flex: 1; min-width: 0; }
+.deal-name { font-size: .85rem; font-weight: 500; color: var(--ink-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: ltr; }
+.deal-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.cat-badge { font-size: .68rem; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: color-mix(in srgb, var(--cat, var(--accent)) 12%, transparent); color: var(--cat, var(--accent)); white-space: nowrap; }
+.deal-link { font-size: .68rem; color: var(--ink-3); }
+.deal-link:hover { color: var(--accent); }
+.repeat-tag { font-size: .65rem; color: var(--danger); font-weight: 600; background: rgba(220,38,38,.1); padding: 1px 5px; border-radius: 4px; }
 
-  .deal-time {
-    font-family: var(--mono);
-    font-size: .72rem;
-    color: var(--ink-3);
-    white-space: nowrap;
-    padding-top: 2px;
-    min-width: 40px;
-    font-variant-numeric: tabular-nums;
-  }
-  .deal-bar {
-    width: 3px;
-    border-radius: 2px;
-    background: var(--cat, var(--accent));
-    flex-shrink: 0;
-    align-self: stretch;
-    min-height: 36px;
-  }
-  .deal-info { flex: 1; min-width: 0; }
-  .deal-name {
-    font-size: .85rem;
-    font-weight: 500;
-    color: var(--ink-1);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-    direction: ltr;
-  }
-  .deal-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 4px;
-  }
-  .cat-badge {
-    font-size: .68rem;
-    font-weight: 600;
-    padding: 2px 7px;
-    border-radius: 20px;
-    background: color-mix(in srgb, var(--cat, var(--accent)) 12%, transparent);
-    color: var(--cat, var(--accent));
-    white-space: nowrap;
-  }
-  .deal-link {
-    font-size: .68rem;
-    color: var(--ink-3);
-    display: flex;
-    align-items: center;
-    gap: 3px;
-  }
-  .deal-link:hover { color: var(--accent); }
+/* Sidebar */
+.sidebar { display: flex; flex-direction: column; gap: 16px; }
+.chart-wrap { padding: 16px 18px; }
+canvas { display: block; width: 100% !important; }
+.cat-list { padding: 0 18px 12px; }
+.cat-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.cat-row:last-child { border-bottom: none; }
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cat, var(--accent)); flex-shrink: 0; }
+.cat-name { flex: 1; font-size: .8rem; color: var(--ink-2); }
+.cat-count { font-family: var(--mono); font-size: .78rem; font-weight: 600; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+.cat-bar-track { width: 60px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.cat-bar-fill { height: 100%; background: var(--cat, var(--accent)); border-radius: 2px; }
 
-  /* ── Sidebar: chart + categories ── */
-  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+/* History */
+.history-toolbar {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 18px; box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.toolbar-label { font-size: .8rem; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.date-input {
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px;
+  font-size: .8rem; background: var(--surface2); color: var(--ink-1);
+  font-family: var(--font); outline: none;
+}
+.date-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+.toolbar-sep { font-size: .8rem; color: var(--ink-3); }
+.btn-filter {
+  background: var(--accent); color: #fff; border: none; border-radius: 6px;
+  padding: 5px 14px; font-size: .8rem; font-weight: 600;
+}
+.btn-filter:hover { background: var(--accent-h); }
+.btn-reset {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 12px; font-size: .8rem; color: var(--ink-2);
+}
+.btn-reset:hover { background: var(--surface2); }
+.filter-status { font-size: .75rem; color: var(--accent); font-weight: 500; margin-right: auto; }
 
-  .chart-wrap { padding: 16px 18px; }
-  .chart-title {
-    font-size: .75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--ink-3);
-    margin-bottom: 14px;
-  }
-  canvas { display: block; width: 100% !important; }
+.history-section { display: flex; flex-direction: column; gap: 10px; }
+.history-day { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.history-day summary { list-style: none; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; }
+.history-day[open] summary { border-bottom-color: var(--border); }
+.history-day summary::-webkit-details-marker { display: none; }
+.history-day summary:hover { background: var(--surface2); }
+.history-date { font-size: .85rem; font-weight: 600; }
+.history-count { font-size: .75rem; font-family: var(--mono); color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+.repeat-flag { font-size: .7rem; color: var(--danger); background: rgba(220,38,38,.1); padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+.chevron { width: 14px; height: 14px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg); transition: transform .2s; flex-shrink: 0; }
+.history-day[open] .chevron { transform: rotate(-135deg); }
 
-  /* ── Category breakdown ── */
-  .cat-list { padding: 0 18px 12px; }
-  .cat-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .cat-row:last-child { border-bottom: none; }
-  .cat-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--cat, var(--accent));
-    flex-shrink: 0;
-  }
-  .cat-name {
-    flex: 1;
-    font-size: .8rem;
-    color: var(--ink-2);
-    direction: rtl;
-    text-align: right;
-  }
-  .cat-count {
-    font-family: var(--mono);
-    font-size: .78rem;
-    font-weight: 600;
-    color: var(--ink-1);
-    font-variant-numeric: tabular-nums;
-  }
-  .cat-bar-track {
-    width: 60px;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .cat-bar-fill {
-    height: 100%;
-    background: var(--cat, var(--accent));
-    border-radius: 2px;
-  }
+.empty { padding: 40px 20px; text-align: center; color: var(--ink-3); font-size: .85rem; }
 
-  /* ── History ── */
-  .history-section { display: flex; flex-direction: column; gap: 10px; }
-  .history-day {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-  }
-  .history-day summary {
-    list-style: none;
-    padding: 12px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    user-select: none;
-    border-bottom: 1px solid transparent;
-  }
-  .history-day[open] summary { border-bottom-color: var(--border); }
-  .history-day summary::-webkit-details-marker { display: none; }
-  .history-day summary:hover { background: var(--surface2); }
-  .history-date {
-    font-size: .85rem;
-    font-weight: 600;
-    color: var(--ink-1);
-  }
-  .history-count {
-    font-size: .75rem;
-    font-family: var(--mono);
-    color: var(--ink-3);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .chevron {
-    width: 14px; height: 14px;
-    border-right: 2px solid var(--ink-3);
-    border-bottom: 2px solid var(--ink-3);
-    transform: rotate(45deg);
-    transition: transform .2s;
-    flex-shrink: 0;
-  }
-  .history-day[open] .chevron { transform: rotate(-135deg); }
-
-  /* ── Empty state ── */
-  .empty {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--ink-3);
-    font-size: .85rem;
-  }
-
-  /* ── Responsive ── */
-  @media (max-width: 800px) {
-    .kpi-row { grid-template-columns: repeat(2, 1fr); }
-    .content-grid { grid-template-columns: 1fr; }
-    .sidebar { flex-direction: row; flex-wrap: wrap; }
-    .sidebar .panel { flex: 1; min-width: 240px; }
-  }
-  @media (max-width: 500px) {
-    main { padding: 16px; }
-    .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .kpi-value { font-size: 1.6rem; }
-  }
+@media (max-width: 800px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .content-grid { grid-template-columns: 1fr; }
+  .sidebar { flex-direction: row; flex-wrap: wrap; }
+  .sidebar .panel { flex: 1; min-width: 240px; }
+}
+@media (max-width: 500px) {
+  main { padding: 14px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .kpi-value { font-size: 1.6rem; }
+}
 </style>
 
 <div class="app">
-  <header>
-    <div class="header-brand">
-      <div class="logo">K</div>
-      <div>
-        <h1>Konimbezol Bot <span>לוח בקרה</span></h1>
-      </div>
+<header>
+  <div class="header-brand">
+    <div class="logo">K</div>
+    <div><h1>Konimbezol Bot <span>לוח בקרה</span></h1></div>
+  </div>
+  <div class="header-right">
+    <div class="status-dot">בוט פעיל</div>
+    <button class="theme-toggle" onclick="toggleTheme()">◐ ערכת נושא</button>
+  </div>
+</header>
+
+<main>
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">דילים היום</div>
+      <div class="kpi-value accent" id="kpi-today">—</div>
+      <div class="kpi-sub" id="kpi-today-time">—</div>
     </div>
-    <div class="header-right">
-      <div class="status-dot">בוט פעיל</div>
-      <button class="theme-toggle" onclick="toggleTheme()">◐ ערכת נושא</button>
+    <div class="kpi">
+      <div class="kpi-label">השבוע</div>
+      <div class="kpi-value" id="kpi-week">—</div>
+      <div class="kpi-sub">7 ימים אחרונים</div>
     </div>
-  </header>
-
-  <main>
-    <!-- KPI row -->
-    <div class="kpi-row">
-      <div class="kpi">
-        <div class="kpi-label">דילים היום</div>
-        <div class="kpi-value accent" id="kpi-today">—</div>
-        <div class="kpi-sub" id="kpi-today-time">—</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">השבוע</div>
-        <div class="kpi-value" id="kpi-week">—</div>
-        <div class="kpi-sub" id="kpi-week-sub">7 ימים אחרונים</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">קטגוריות פעילות</div>
-        <div class="kpi-value" id="kpi-cats">—</div>
-        <div class="kpi-sub">מתוך 10 קטגוריות</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">חלון שנשלח</div>
-        <div class="kpi-value" id="kpi-window">—</div>
-        <div class="kpi-sub">מתוך 70 מקסימום</div>
-      </div>
+    <div class="kpi">
+      <div class="kpi-label">קטגוריות פעילות</div>
+      <div class="kpi-value" id="kpi-cats">—</div>
+      <div class="kpi-sub">מתוך 10 קטגוריות</div>
     </div>
+    <div class="kpi">
+      <div class="kpi-label">חלון שנשלח</div>
+      <div class="kpi-value" id="kpi-window">—</div>
+      <div class="kpi-sub">מתוך 70 מקסימום</div>
+    </div>
+    <div class="kpi kpi-warn">
+      <div class="kpi-label">חוזרים (3 ימים)</div>
+      <div class="kpi-value danger" id="kpi-repeats">—</div>
+      <div class="kpi-sub" id="kpi-repeats-sub">בדיקת כפילויות</div>
+    </div>
+  </div>
 
-    <!-- Content -->
-    <div class="content-grid">
-      <!-- Feed -->
-      <div class="panel" id="feed-panel">
-        <div class="panel-header">
-          <span class="panel-title">📤 דילים שנשלחו היום</span>
-          <span class="panel-meta" id="feed-date">—</span>
-        </div>
-        <div class="panel-body" id="feed-body">
-          <div class="empty">טוען נתונים…</div>
-        </div>
+  <!-- Repeats alert -->
+  <div class="repeats-panel hidden" id="repeats-panel">
+    <div class="repeats-header">
+      <span class="repeats-title">🔄 דילים שחזרו תוך 3 ימים</span>
+      <span class="repeats-sub" id="repeats-count-label">—</span>
+    </div>
+    <div class="repeats-body" id="repeats-body"></div>
+  </div>
+
+  <!-- Content -->
+  <div class="content-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📤 דילים שנשלחו היום</span>
+        <span class="panel-meta" id="feed-date">—</span>
       </div>
-
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <!-- Chart -->
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">📊 דילים ב-7 ימים</span>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="chart" height="140"></canvas>
-          </div>
-        </div>
-
-        <!-- Categories -->
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">🏷 לפי קטגוריה (היום)</span>
-          </div>
-          <div class="cat-list" id="cat-list">
-            <div class="empty">—</div>
-          </div>
-        </div>
-      </div>
+      <div class="panel-body" id="feed-body"><div class="empty">טוען…</div></div>
     </div>
 
-    <!-- History -->
-    <div>
-      <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3); font-weight:600; margin-bottom:10px; padding:0 2px;">
-        היסטוריה — 30 ימים אחרונים
+    <div class="sidebar">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">📊 דילים ב-7 ימים</span></div>
+        <div class="chart-wrap"><canvas id="chart" height="140"></canvas></div>
       </div>
-      <div class="history-section" id="history-section">
-        <div class="empty">טוען…</div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">🏷 לפי קטגוריה (היום)</span></div>
+        <div class="cat-list" id="cat-list"><div class="empty">—</div></div>
       </div>
     </div>
-  </main>
+  </div>
+
+  <!-- History -->
+  <div>
+    <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600;margin-bottom:10px;padding:0 2px;">
+      היסטוריה
+    </div>
+
+    <!-- Date filter toolbar -->
+    <div class="history-toolbar" style="margin-bottom:12px;">
+      <span class="toolbar-label">📅 סנן לפי תאריך:</span>
+      <input type="date" id="filter-from" class="date-input">
+      <span class="toolbar-sep">עד</span>
+      <input type="date" id="filter-to" class="date-input">
+      <button class="btn-filter" onclick="applyFilter()">סנן</button>
+      <button class="btn-reset" onclick="resetFilter()">הצג הכל</button>
+      <span class="filter-status" id="filter-status"></span>
+    </div>
+
+    <div class="history-section" id="history-section"><div class="empty">טוען…</div></div>
+  </div>
+</main>
 </div>
 
 <script>
-// ── Theme ──────────────────────────────────────────────────────
+// ── Theme ──────────────────────────────────────────────────────────────
 function toggleTheme() {
   const r = document.documentElement;
-  const cur = r.dataset.theme;
-  const pref = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  if (!cur) { r.dataset.theme = pref === 'dark' ? 'light' : 'dark'; }
-  else if (cur === 'dark') { r.dataset.theme = 'light'; }
-  else { delete r.dataset.theme; }
+  const pref = window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  if (!r.dataset.theme) r.dataset.theme = pref === 'dark' ? 'light' : 'dark';
+  else if (r.dataset.theme === 'dark') r.dataset.theme = 'light';
+  else delete r.dataset.theme;
+  drawChart(window._byDate || {});
 }
 
-// ── Category meta ──────────────────────────────────────────────
+// ── Categories ─────────────────────────────────────────────────────────
 const CATS = {
-  'גאדג\'טים':        { emoji: '📱', cls: 'cat--gadget',  color: '#3b82f6' },
-  'אופנה וסטייל':    { emoji: '👗', cls: 'cat--fashion', color: '#ec4899' },
-  'ספורט וכושר':     { emoji: '💪', cls: 'cat--sport',   color: '#10b981' },
-  'מוצרי מטבח':      { emoji: '🍳', cls: 'cat--kitchen', color: '#f59e0b' },
-  'מוצרים לרכב':     { emoji: '🚗', cls: 'cat--car',     color: '#6366f1' },
-  'בית וגן':          { emoji: '🏠', cls: 'cat--home',    color: '#84cc16' },
-  'שעונים ותכשיטים': { emoji: '⌚', cls: 'cat--watch',   color: '#eab308' },
-  'כלי עבודה':        { emoji: '🔧', cls: 'cat--tools',   color: '#f97316' },
-  'מוצרים לילדים':   { emoji: '🎁', cls: 'cat--kids',    color: '#a855f7' },
-  'מוצר מומלץ':      { emoji: '⭐', cls: 'cat--special', color: '#14b8a6' },
+  "גאדג'טים":        { emoji:'🔧', cls:'cat--gadget',  color:'#3b82f6' },
+  'אופנה וסטייל':    { emoji:'👗', cls:'cat--fashion', color:'#ec4899' },
+  'ספורט וכושר':     { emoji:'💪', cls:'cat--sport',   color:'#10b981' },
+  'מוצרי מטבח':      { emoji:'🍳', cls:'cat--kitchen', color:'#f59e0b' },
+  'מוצרים לרכב':     { emoji:'🚗', cls:'cat--car',     color:'#6366f1' },
+  'בית וגן':          { emoji:'🏠', cls:'cat--home',    color:'#84cc16' },
+  'שעונים ותכשיטים': { emoji:'⌚', cls:'cat--watch',   color:'#eab308' },
+  'כלי עבודה':        { emoji:'🛠️', cls:'cat--tools',   color:'#f97316' },
+  'מוצרים לילדים':   { emoji:'🎁', cls:'cat--kids',    color:'#a855f7' },
+  'מוצר מומלץ':      { emoji:'⭐', cls:'cat--special', color:'#14b8a6' },
 };
-function catMeta(cat) {
-  return CATS[cat] || { emoji: '📦', cls: '', color: '#3b82f6' };
-}
+const catMeta = cat => CATS[cat] || { emoji:'📦', cls:'', color:'#3b82f6' };
 
-// ── Helpers ────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────
+const pad = n => String(n).padStart(2,'0');
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function dateKey(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
 function formatDate(d) {
-  const [y, m, day] = d.split('-');
-  const months = ['','ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-  return `${parseInt(day)} ${months[parseInt(m)]} ${y}`;
+  const [y,m,day] = d.split('-');
+  const M = ['','ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  return `${parseInt(day)} ${M[parseInt(m)]} ${y}`;
 }
-function isToday(d) {
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  return d === `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-}
-function slugify(url) {
-  return url ? url.split('/product/')[1] || url : '';
+function daysBetween(a, b) {
+  return Math.abs((new Date(b) - new Date(a)) / 86400000);
 }
 
-// ── Render feed ────────────────────────────────────────────────
-function renderFeed(items) {
+// ── Repeats detection ─────────────────────────────────────────────────
+function findRepeats(data, windowDays = 3) {
+  const byUrl = {};
+  data.forEach(item => {
+    const key = item.url || item.name;
+    if (!byUrl[key]) byUrl[key] = [];
+    byUrl[key].push(item);
+  });
+
+  const repeats = [];
+  const repeatUrls = new Set();
+
+  Object.values(byUrl).forEach(appearances => {
+    if (appearances.length < 2) return;
+    const sorted = [...appearances].sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const diff = daysBetween(sorted[i].date, sorted[i+1].date);
+      if (diff <= windowDays && diff > 0) {
+        repeats.push({
+          item: sorted[i+1],
+          prevDate: sorted[i].date,
+          prevTime: sorted[i].time,
+          diff: Math.round(diff),
+        });
+        repeatUrls.add(sorted[i+1].url || sorted[i+1].name);
+        repeatUrls.add(sorted[i].url || sorted[i].name + sorted[i].date);
+      }
+    }
+  });
+
+  return { repeats, repeatUrls };
+}
+
+function isRepeatItem(item, repeatUrls) {
+  return repeatUrls.has(item.url || item.name);
+}
+
+// ── Render feed (today) ───────────────────────────────────────────────
+function renderFeed(items, repeatUrls) {
   const el = document.getElementById('feed-body');
   if (!items || !items.length) {
-    el.innerHTML = '<div class="empty">עוד לא נשלחו דילים היום</div>';
-    return;
+    el.innerHTML = '<div class="empty">עוד לא נשלחו דילים היום</div>'; return;
   }
   el.innerHTML = items.map(item => {
     const m = catMeta(item.category);
-    const slug = slugify(item.url);
-    return `<div class="deal-item ${m.cls}">
-      <span class="deal-time">${item.time || ''}</span>
+    const rep = isRepeatItem(item, repeatUrls);
+    return `<div class="deal-item ${m.cls}${rep?' is-repeat':''}">
+      <span class="deal-time">${item.time||''}</span>
       <div class="deal-bar"></div>
       <div class="deal-info">
-        <div class="deal-name" title="${item.name}">${item.name}</div>
+        <div class="deal-name">${item.name}</div>
         <div class="deal-meta">
           <span class="cat-badge ${m.cls}">${m.emoji} ${item.category}</span>
+          ${rep ? '<span class="repeat-tag">🔄 חוזר</span>' : ''}
           ${item.link ? `<a class="deal-link" href="${item.link}" target="_blank" rel="noopener">↗ AliExpress</a>` : ''}
         </div>
       </div>
@@ -582,7 +426,41 @@ function renderFeed(items) {
   }).join('');
 }
 
-// ── Render categories ──────────────────────────────────────────
+// ── Render repeats panel ──────────────────────────────────────────────
+function renderRepeats(repeats) {
+  const panel = document.getElementById('repeats-panel');
+  const kpi = document.getElementById('kpi-repeats');
+  const sub = document.getElementById('kpi-repeats-sub');
+  const body = document.getElementById('repeats-body');
+  const label = document.getElementById('repeats-count-label');
+
+  kpi.textContent = repeats.length;
+  sub.textContent = repeats.length === 0 ? 'אין כפילויות 👍' : `${repeats.length} מקרים ב-3 ימים`;
+
+  if (!repeats.length) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  label.textContent = `${repeats.length} דילים שנשלחו פעמיים תוך 3 ימים`;
+
+  body.innerHTML = repeats.map(r => {
+    const m = catMeta(r.item.category);
+    return `<div class="repeat-item">
+      <div style="flex:1;min-width:0;">
+        <div class="repeat-name">${r.item.name}</div>
+        <div class="deal-meta" style="margin-top:4px;">
+          <span class="cat-badge ${m.cls}">${m.emoji} ${r.item.category}</span>
+        </div>
+      </div>
+      <div style="text-align:left;flex-shrink:0;">
+        <div class="repeat-badge">🔄 חזר אחרי ${r.diff} ימים</div>
+        <div class="repeat-dates" style="margin-top:4px;">
+          ${formatDate(r.prevDate)} ${r.prevTime} ← ${formatDate(r.item.date)} ${r.item.time}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Render categories ─────────────────────────────────────────────────
 function renderCats(items) {
   const el = document.getElementById('cat-list');
   if (!items || !items.length) { el.innerHTML = ''; return; }
@@ -592,107 +470,95 @@ function renderCats(items) {
   const max = sorted[0][1];
   el.innerHTML = sorted.map(([cat, n]) => {
     const m = catMeta(cat);
-    const pct = Math.round(n/max*100);
     return `<div class="cat-row ${m.cls}">
       <div class="cat-dot"></div>
       <div class="cat-name">${m.emoji} ${cat}</div>
-      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%"></div></div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
       <div class="cat-count">${n}</div>
     </div>`;
   }).join('');
 }
 
-// ── Draw chart ─────────────────────────────────────────────────
+// ── Chart ─────────────────────────────────────────────────────────────
 function drawChart(byDate) {
   const canvas = document.getElementById('chart');
+  if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.parentElement.clientWidth - 36;
   const H = 140;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.width = W * dpr; canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  // Last 7 days
-  const days = [];
-  for (let i=6; i>=0; i--) {
-    const d = new Date(); d.setDate(d.getDate()-i);
-    const pad = n => String(n).padStart(2,'0');
-    const key = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-    const label = i===0 ? 'היום' : pad(d.getDate())+'/'+pad(d.getMonth()+1);
-    days.push({ key, label, count: (byDate[key]||[]).length });
-  }
-
+  const days = Array.from({length:7},(_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-(6-i));
+    const key = dateKey(d);
+    const label = i===6 ? 'היום' : pad(d.getDate())+'/'+pad(d.getMonth()+1);
+    return { key, label, count: (byDate[key]||[]).length };
+  });
   const max = Math.max(...days.map(d=>d.count), 1);
-  const pad = { l:4, r:4, t:10, b:28 };
-  const barW = Math.floor((W - pad.l - pad.r) / 7) - 4;
-
-  // CSS variable values for theming
-  const cs = getComputedStyle(document.documentElement);
-  const isDark = document.documentElement.dataset.theme === 'dark' ||
+  const pd = { l:4, r:4, t:10, b:28 };
+  const barW = Math.floor((W - pd.l - pd.r) / 7) - 4;
+  const isDark = document.documentElement.dataset.theme==='dark' ||
     (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme:dark)').matches);
-  const accentColor = isDark ? '#3b82f6' : '#2563eb';
-  const mutedColor = isDark ? '#1e293b' : '#e2e7f4';
-  const textColor = isDark ? '#64748b' : '#94a3b8';
-  const accentFaint = isDark ? 'rgba(59,130,246,.15)' : 'rgba(37,99,235,.08)';
+  const ac = isDark ? '#3b82f6' : '#2563eb';
+  const mu = isDark ? '#1e293b' : '#e2e7f4';
+  const tx = isDark ? '#64748b' : '#94a3b8';
+  const af = isDark ? 'rgba(59,130,246,.15)' : 'rgba(37,99,235,.08)';
 
   days.forEach((d, i) => {
-    const x = pad.l + i * ((W - pad.l - pad.r) / 7) + ((W - pad.l - pad.r)/7 - barW)/2;
-    const barH = d.count > 0 ? Math.max(4, (d.count/max)*(H-pad.t-pad.b)) : 0;
-    const y = H - pad.b - barH;
-    const isToday = i === 6;
-
-    // Bar
-    ctx.beginPath();
-    ctx.roundRect(x, y, barW, barH, 3);
-    ctx.fillStyle = isToday ? accentColor : (d.count > 0 ? accentFaint : mutedColor);
-    ctx.fill();
-
-    // Today's bar: glow
-    if (isToday && d.count > 0) {
-      const grad = ctx.createLinearGradient(x, y, x, H-pad.b);
-      grad.addColorStop(0, accentColor);
-      grad.addColorStop(1, accentColor + '88');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.roundRect(x, y, barW, barH, 3);
-      ctx.fill();
+    const x = pd.l + i * ((W-pd.l-pd.r)/7) + ((W-pd.l-pd.r)/7-barW)/2;
+    const barH = d.count>0 ? Math.max(4,(d.count/max)*(H-pd.t-pd.b)) : 0;
+    const y = H - pd.b - barH;
+    const today = i===6;
+    if (today && d.count>0) {
+      const g = ctx.createLinearGradient(x,y,x,H-pd.b);
+      g.addColorStop(0, ac); g.addColorStop(1, ac+'88');
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = d.count>0 ? af : mu;
     }
-
-    // Count label above bar
-    if (d.count > 0) {
-      ctx.fillStyle = isToday ? accentColor : textColor;
-      ctx.font = `600 ${isToday?'11':'10'}px -apple-system,sans-serif`;
+    ctx.beginPath(); ctx.roundRect(x,y,barW,barH,3); ctx.fill();
+    if (d.count>0) {
+      ctx.fillStyle = today ? ac : tx;
+      ctx.font = `600 ${today?'11':'10'}px -apple-system,sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(d.count, x + barW/2, y - 3);
+      ctx.fillText(d.count, x+barW/2, y-3);
     }
-
-    // Date label
-    ctx.fillStyle = isToday ? accentColor : textColor;
-    ctx.font = `${isToday?'600':'400'} 10px -apple-system,sans-serif`;
+    ctx.fillStyle = today ? ac : tx;
+    ctx.font = `${today?'600':'400'} 10px -apple-system,sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(d.label, x + barW/2, H - 6);
+    ctx.fillText(d.label, x+barW/2, H-6);
   });
 }
 
-// ── Render history ─────────────────────────────────────────────
-function renderHistory(byDate) {
+// ── History ───────────────────────────────────────────────────────────
+let _byDate = {}, _repeatUrls = new Set();
+
+function renderHistory(byDate, from, to) {
   const el = document.getElementById('history-section');
-  const dates = Object.keys(byDate).sort().reverse();
-  if (!dates.length) { el.innerHTML = '<div class="empty">אין היסטוריה עדיין</div>'; return; }
+  let dates = Object.keys(byDate).sort().reverse();
+
+  if (from) dates = dates.filter(d => d >= from);
+  if (to)   dates = dates.filter(d => d <= to);
+
+  if (!dates.length) {
+    el.innerHTML = '<div class="empty">אין דילים בטווח התאריכים הזה</div>'; return;
+  }
+
   el.innerHTML = dates.map((date, idx) => {
     const items = byDate[date];
-    const isOpen = idx === 0;
     const cats = [...new Set(items.map(i=>i.category))].map(c=>catMeta(c).emoji).join(' ');
-    return `<details class="history-day" ${isOpen?'open':''}>
+    const dayRepeats = items.filter(i => isRepeatItem(i, _repeatUrls)).length;
+    return `<details class="history-day" ${idx===0?'open':''}>
       <summary>
         <div>
           <div class="history-date">${formatDate(date)}</div>
           <div style="font-size:.72rem;color:var(--ink-3);margin-top:2px;">${cats}</div>
         </div>
         <div class="history-count">
+          ${dayRepeats > 0 ? `<span class="repeat-flag">🔄 ${dayRepeats} חוזרים</span>` : ''}
           <span>${items.length} דילים</span>
           <div class="chevron"></div>
         </div>
@@ -700,13 +566,15 @@ function renderHistory(byDate) {
       <div class="panel-body">
         ${items.map(item => {
           const m = catMeta(item.category);
-          return `<div class="deal-item ${m.cls}">
+          const rep = isRepeatItem(item, _repeatUrls);
+          return `<div class="deal-item ${m.cls}${rep?' is-repeat':''}">
             <span class="deal-time">${item.time||''}</span>
             <div class="deal-bar"></div>
             <div class="deal-info">
               <div class="deal-name">${item.name}</div>
               <div class="deal-meta">
                 <span class="cat-badge ${m.cls}">${m.emoji} ${item.category}</span>
+                ${rep ? '<span class="repeat-tag">🔄 חוזר</span>' : ''}
                 ${item.link ? `<a class="deal-link" href="${item.link}" target="_blank" rel="noopener">↗ AliExpress</a>` : ''}
               </div>
             </div>
@@ -717,54 +585,59 @@ function renderHistory(byDate) {
   }).join('');
 }
 
-// ── Data loading ───────────────────────────────────────────────
-const RAW_URL = 'https://raw.githubusercontent.com/nadavi256/KONIMBEZOLBOT/main/daily_sent.json';
-// MOCK DATA — replaces the fetch call in the Artifact preview
-const MOCK_DATA = [
-  {date:"2026-07-06",time:"09:15",name:"Magcubic HY300 Pro Projector",category:"גאדג'טים",url:"https://konimbezol.co.il/product/magcubic-hy300-pro-projector",link:"https://s.click.aliexpress.com/e/_abc123"},
-  {date:"2026-07-06",time:"09:30",name:"Men's Fitness Basketball Sleeveless Shirt",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/mens-fitness-basketball-sleeveless-shirt",link:"https://s.click.aliexpress.com/e/_def456"},
-  {date:"2026-07-06",time:"09:45",name:"Portable Vertical Steam Iron",category:"מוצרי מטבח",url:"https://konimbezol.co.il/product/portable-vertical-steam-iron",link:"https://s.click.aliexpress.com/e/_ghi789"},
-  {date:"2026-07-06",time:"10:00",name:"Professional Weightlifting Hooks Grip Straps",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/professional-weightlifting-hooks-grip-straps-deadlift-fitness",link:"https://s.click.aliexpress.com/e/_jkl012"},
-  {date:"2026-07-06",time:"10:15",name:"Nike Air Max Fire Men's Running Shoes",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/nike-air-max-fire-mens-running-shoes",link:"https://s.click.aliexpress.com/e/_mno345"},
-  {date:"2026-07-06",time:"10:30",name:"Kids PVC Punching Bag",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/kids-pvc-punching-bag",link:"https://s.click.aliexpress.com/e/_pqr678"},
-  {date:"2026-07-06",time:"10:45",name:"Gyro Power Ball",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/gyro-power-ball",link:"https://s.click.aliexpress.com/e/_stu901"},
-  {date:"2026-07-06",time:"11:00",name:"Smart Solar Outdoor Light",category:"בית וגן",url:"https://konimbezol.co.il/product/smart-solar-outdoor-light",link:"https://s.click.aliexpress.com/e/_vwx234"},
-  {date:"2026-07-05",time:"09:00",name:"Baseus 45W Mini Powerbank 10000mAh",category:"גאדג'טים",url:"https://konimbezol.co.il/product/baseus-45w-mini-powerbank-10000mah-usb-c",link:"https://s.click.aliexpress.com/e/_bcd567"},
-  {date:"2026-07-05",time:"09:15",name:"Women V-Back Scrunch Leggings",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/women-v-back-scrunch-leggings-high-waist-fitness-yoga-pants",link:"https://s.click.aliexpress.com/e/_efg890"},
-  {date:"2026-07-05",time:"09:30",name:"Addiesdive AD2545 Men's Dive Watch",category:"שעונים ותכשיטים",url:"https://konimbezol.co.il/product/addiesdive-ad2545-mens-dive-watch",link:"https://s.click.aliexpress.com/e/_hij123"},
-  {date:"2026-07-05",time:"09:45",name:"Pro Ab Roller Wheel Automatic Rebound",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/pro-ab-roller-wheel-automatic-rebound-core-workout",link:"https://s.click.aliexpress.com/e/_klm456"},
-  {date:"2026-07-04",time:"09:00",name:"Xinzuo 8.5 inch Chef Knife",category:"מוצרי מטבח",url:"https://konimbezol.co.il/product/xinzuo-8-5-inch-chef-knife",link:"https://s.click.aliexpress.com/e/_nop789"},
-  {date:"2026-07-04",time:"09:15",name:"Multifunctional Pilates Bar Resistance Bands",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/multifunctional-pilates-bar-resistance-bands-fitness-home",link:"https://s.click.aliexpress.com/e/_qrs012"},
-  {date:"2026-07-04",time:"09:30",name:"Electric Shaver Men Rechargeable Waterproof",category:"גאדג'טים",url:"https://konimbezol.co.il/product/electric-shaver-men-rechargeable-waterproof",link:"https://s.click.aliexpress.com/e/_tuv345"},
-  {date:"2026-07-04",time:"09:45",name:"Padded Ski Snowboard Impact Shorts",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/padded-ski-snowboard-impact-shorts-protection-gear",link:"https://s.click.aliexpress.com/e/_wxy678"},
-  {date:"2026-07-04",time:"10:00",name:"Tuya WiFi Smart Switch",category:"בית וגן",url:"https://konimbezol.co.il/product/tuya-wifi-smart-switch",link:"https://s.click.aliexpress.com/e/_zab901"},
-  {date:"2026-07-04",time:"10:15",name:"Adidas Adimatic Patchwork Retro Sneakers",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/adidas-adimatic-patchwork-retro-sneakers-jr8034-review",link:"https://s.click.aliexpress.com/e/_cde234"},
-  {date:"2026-07-03",time:"09:00",name:"Adjustable Hand Gripper 5-100kg",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/adjustable-hand-gripper-5-100kg-forearm-strengthener",link:"https://s.click.aliexpress.com/e/_fgh567"},
-  {date:"2026-07-03",time:"09:15",name:"Rozin Smart Touch Kitchen Faucet",category:"מוצרי מטבח",url:"https://konimbezol.co.il/product/rozin-smart-touch-kitchen-faucet",link:"https://s.click.aliexpress.com/e/_ijk890"},
-  {date:"2026-07-03",time:"09:30",name:"2024 Upgraded Metal Detector Pinpointer",category:"גאדג'טים",url:"https://konimbezol.co.il/product/2024-upgraded-metal-detector-pinpointer-ii-waterproof",link:"https://s.click.aliexpress.com/e/_lmn123"},
-  {date:"2026-07-02",time:"09:00",name:"Nike Jordan Luka Basketball Shoes",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/nike-jordan-luka-basketball-shoes-hf0819-006",link:"https://s.click.aliexpress.com/e/_opq456"},
-  {date:"2026-07-02",time:"09:15",name:"Mini Electric Cycling Pump 100PSI",category:"מוצרים לרכב",url:"https://konimbezol.co.il/product/mini-electric-cycling-pump-100psi-rechargeable-type-c",link:"https://s.click.aliexpress.com/e/_rst789"},
-  {date:"2026-07-02",time:"09:30",name:"Car Trunk Organizer Oxford",category:"מוצרים לרכב",url:"https://konimbezol.co.il/product/car-trunk-organizer-oxford",link:"https://s.click.aliexpress.com/e/_uvw012"},
-  {date:"2026-07-01",time:"09:00",name:"Portable Multi Purpose Cushion Travel Office",category:"בית וגן",url:"https://konimbezol.co.il/product/portable-multi-purpose-cushion-travel-office",link:"https://s.click.aliexpress.com/e/_xyz345"},
-  {date:"2026-07-01",time:"09:15",name:"Magcubic HY300 Pro Projector",category:"גאדג'טים",url:"https://konimbezol.co.il/product/magcubic-hy300-pro-projector",link:"https://s.click.aliexpress.com/e/_abc678"},
-];
-
-async function loadRealData() {
-  try {
-    const r = await fetch(RAW_URL, {cache:'no-cache'});
-    if (!r.ok) throw new Error('fetch failed');
-    return await r.json();
-  } catch(e) {
-    return null;
-  }
+// ── Filter ────────────────────────────────────────────────────────────
+function applyFilter() {
+  const from = document.getElementById('filter-from').value;
+  const to   = document.getElementById('filter-to').value;
+  const status = document.getElementById('filter-status');
+  if (!from && !to) { status.textContent = ''; renderHistory(_byDate); return; }
+  const label = from && to ? `${from} עד ${to}` : from ? `מ-${from}` : `עד ${to}`;
+  status.textContent = `מסונן: ${label}`;
+  renderHistory(_byDate, from, to);
+}
+function resetFilter() {
+  document.getElementById('filter-from').value = '';
+  document.getElementById('filter-to').value = '';
+  document.getElementById('filter-status').textContent = '';
+  renderHistory(_byDate);
 }
 
+// ── Mock data ─────────────────────────────────────────────────────────
+const MOCK_DATA = [
+  {date:"2026-07-06",time:"09:15",name:"Magcubic HY300 Pro Projector",category:"גאדג'טים",url:"https://konimbezol.co.il/product/magcubic-hy300-pro-projector",link:"https://s.click.aliexpress.com/e/_a1"},
+  {date:"2026-07-06",time:"09:30",name:"Men's Fitness Basketball Sleeveless Shirt",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/mens-fitness-basketball-sleeveless-shirt",link:"https://s.click.aliexpress.com/e/_a2"},
+  {date:"2026-07-06",time:"09:45",name:"Portable Vertical Steam Iron",category:"מוצרי מטבח",url:"https://konimbezol.co.il/product/portable-vertical-steam-iron",link:"https://s.click.aliexpress.com/e/_a3"},
+  {date:"2026-07-06",time:"10:00",name:"Professional Weightlifting Hooks Grip Straps",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/professional-weightlifting-hooks",link:"https://s.click.aliexpress.com/e/_a4"},
+  {date:"2026-07-06",time:"10:15",name:"Nike Air Max Fire Men's Running Shoes",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/nike-air-max-fire",link:"https://s.click.aliexpress.com/e/_a5"},
+  {date:"2026-07-06",time:"10:30",name:"Kids PVC Punching Bag",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/kids-pvc-punching-bag",link:"https://s.click.aliexpress.com/e/_a6"},
+  {date:"2026-07-06",time:"10:45",name:"Smart Solar Outdoor Light",category:"בית וגן",url:"https://konimbezol.co.il/product/smart-solar-outdoor-light",link:"https://s.click.aliexpress.com/e/_a7"},
+  {date:"2026-07-05",time:"09:00",name:"Baseus 45W Mini Powerbank 10000mAh",category:"גאדג'טים",url:"https://konimbezol.co.il/product/baseus-45w-mini-powerbank",link:"https://s.click.aliexpress.com/e/_b1"},
+  {date:"2026-07-05",time:"09:15",name:"Women V-Back Scrunch Leggings",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/women-v-back-scrunch-leggings",link:"https://s.click.aliexpress.com/e/_b2"},
+  {date:"2026-07-05",time:"09:30",name:"Addiesdive AD2545 Men's Dive Watch",category:"שעונים ותכשיטים",url:"https://konimbezol.co.il/product/addiesdive-ad2545",link:"https://s.click.aliexpress.com/e/_b3"},
+  {date:"2026-07-05",time:"09:45",name:"Nike Air Max Fire Men's Running Shoes",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/nike-air-max-fire",link:"https://s.click.aliexpress.com/e/_b4"},
+  {date:"2026-07-04",time:"09:00",name:"Xinzuo 8.5 inch Chef Knife",category:"מוצרי מטבח",url:"https://konimbezol.co.il/product/xinzuo-chef-knife",link:"https://s.click.aliexpress.com/e/_c1"},
+  {date:"2026-07-04",time:"09:15",name:"Multifunctional Pilates Bar Resistance Bands",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/multifunctional-pilates-bar",link:"https://s.click.aliexpress.com/e/_c2"},
+  {date:"2026-07-04",time:"09:30",name:"Magcubic HY300 Pro Projector",category:"גאדג'טים",url:"https://konimbezol.co.il/product/magcubic-hy300-pro-projector",link:"https://s.click.aliexpress.com/e/_c3"},
+  {date:"2026-07-04",time:"09:45",name:"Tuya WiFi Smart Switch",category:"בית וגן",url:"https://konimbezol.co.il/product/tuya-wifi-smart-switch",link:"https://s.click.aliexpress.com/e/_c4"},
+  {date:"2026-07-03",time:"09:00",name:"Adjustable Hand Gripper 5-100kg",category:"ספורט וכושר",url:"https://konimbezol.co.il/product/adjustable-hand-gripper",link:"https://s.click.aliexpress.com/e/_d1"},
+  {date:"2026-07-03",time:"09:15",name:"Rozin Smart Touch Kitchen Faucet",category:"מוצרי מטבח",url:"https://konimbezol.co.il/product/rozin-smart-touch-faucet",link:"https://s.click.aliexpress.com/e/_d2"},
+  {date:"2026-07-02",time:"09:00",name:"Nike Jordan Luka Basketball Shoes",category:"אופנה וסטייל",url:"https://konimbezol.co.il/product/nike-jordan-luka",link:"https://s.click.aliexpress.com/e/_e1"},
+  {date:"2026-07-02",time:"09:15",name:"Mini Electric Cycling Pump 100PSI",category:"מוצרים לרכב",url:"https://konimbezol.co.il/product/mini-electric-cycling-pump",link:"https://s.click.aliexpress.com/e/_e2"},
+  {date:"2026-07-01",time:"09:00",name:"Car Trunk Organizer Oxford",category:"מוצרים לרכב",url:"https://konimbezol.co.il/product/car-trunk-organizer",link:"https://s.click.aliexpress.com/e/_f1"},
+  {date:"2026-07-01",time:"09:15",name:"Xinzuo 8.5 inch Chef Knife",category:"מוצרי מטבח",url:"https://konimbezol.co.il/product/xinzuo-chef-knife",link:"https://s.click.aliexpress.com/e/_f2"},
+];
+
+// ── Init ──────────────────────────────────────────────────────────────
+const RAW_URL = 'https://raw.githubusercontent.com/nadavi256/KONIMBEZOLBOT/main/daily_sent.json';
+
 async function init() {
-  // Try real data; fall back to mock
-  const IS_ARTIFACT = window.location.protocol === 'null:' || window.location.href.includes('claude.ai') || window.location.href.includes('artifacts');
+  const IS_ARTIFACT = window.location.href.includes('claude.ai') || window.location.protocol === 'null:';
   let data;
   if (!IS_ARTIFACT) {
-    data = await loadRealData();
+    try {
+      const r = await fetch(RAW_URL, {cache:'no-cache'});
+      if (r.ok) data = await r.json();
+    } catch(e) {}
   }
   if (!data) data = MOCK_DATA;
 
@@ -774,41 +647,46 @@ async function init() {
     if (!byDate[item.date]) byDate[item.date] = [];
     byDate[item.date].push(item);
   });
+  _byDate = byDate;
 
-  // Today key
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const todayKey = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const todayItems = byDate[todayKey] || [];
+  // Find repeats
+  const { repeats, repeatUrls } = findRepeats(data);
+  _repeatUrls = repeatUrls;
+
+  // Today
+  const tKey = todayKey();
+  const todayItems = byDate[tKey] || [];
 
   // KPIs
-  const weekKeys = Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;});
-  const weekCount = weekKeys.reduce((s,k)=>s+(byDate[k]||[]).length, 0);
+  const weekCount = Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-i);return dateKey(d);})
+    .reduce((s,k)=>s+(byDate[k]||[]).length, 0);
   const activeCats = new Set(todayItems.map(i=>i.category)).size;
 
   document.getElementById('kpi-today').textContent = todayItems.length;
   document.getElementById('kpi-today-time').textContent = todayItems.length ? `אחרון ב-${todayItems[todayItems.length-1].time}` : 'עדיין לא נשלח';
   document.getElementById('kpi-week').textContent = weekCount;
   document.getElementById('kpi-cats').textContent = activeCats || '—';
-  document.getElementById('kpi-window').textContent = data.length > 0 ? Math.min(data.length, 70) : '0';
-  document.getElementById('feed-date').textContent = formatDate(todayKey);
+  document.getElementById('kpi-window').textContent = Math.min(data.length, 70);
+  document.getElementById('feed-date').textContent = formatDate(tKey);
 
-  // Feed
-  renderFeed(todayItems);
+  // Set default filter dates to last 30 days
+  const d30 = new Date(); d30.setDate(d30.getDate()-29);
+  document.getElementById('filter-from').value = dateKey(d30);
+  document.getElementById('filter-to').value = tKey;
+
+  window._byDate = byDate;
+
+  renderFeed(todayItems, repeatUrls);
   renderCats(todayItems);
+  renderRepeats(repeats);
   drawChart(byDate);
-  renderHistory(byDate);
+  renderHistory(byDate, dateKey(d30), tKey);
 }
 
-// Redraw chart on resize
-let resizeTimer;
+let _resizeTimer;
 window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    const byDate = {};
-    [].forEach.call(document.querySelectorAll('.deal-item'), () => {});
-    init();
-  }, 200);
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => drawChart(window._byDate||{}), 180);
 });
 
 init();
