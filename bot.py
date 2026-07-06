@@ -16,7 +16,7 @@ from scraper import get_products
 from message_builder import build_message, build_daily_footer
 from sent_tracker import load_sent, save_sent
 from known_tracker import load_seen_ever, save_seen_ever
-from daily_log import log_product
+from daily_log import log_product, load_recent_urls
 
 load_dotenv()
 
@@ -96,7 +96,16 @@ async def send_hourly_products():
 
     sent_urls, sent_ordered = load_sent()
     seen_ever = load_seen_ever()
-    logger.info(f"Sent window: {len(sent_urls)} | Known ever: {len(seen_ever)}")
+
+    # Hard 48-hour barrier: never resend a product sent in the last 2 days,
+    # regardless of rolling window state (protects against accidental resets).
+    recent_48h = load_recent_urls(days=2)
+    blocked_by_48h = recent_48h - sent_urls
+    if blocked_by_48h:
+        logger.info(f"48h barrier: blocking {len(blocked_by_48h)} extra URLs not in sent window")
+    sent_urls = sent_urls | recent_48h
+
+    logger.info(f"Sent window: {len(sent_urls)} (incl. 48h barrier) | Known ever: {len(seen_ever)}")
 
     try:
         candidates = await get_products(

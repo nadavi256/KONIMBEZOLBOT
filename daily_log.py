@@ -84,3 +84,10 @@ def load_today() -> list[dict]:
     entries, _ = _get_file()
     today = _today_il()
     return [e for e in entries if e.get("date") == today]
+
+
+def load_recent_urls(days: int = 2) -> set:
+    """Return URLs sent in the last N days — used as a hard dedup barrier."""
+    entries, _ = _get_file()
+    cutoff = (datetime.now(IL_TZ) - timedelta(days=days)).strftime("%Y-%m-%d")
+    return {e["url"] for e in entries if e.get("date", "") >= cutoff and e.get("url")}
