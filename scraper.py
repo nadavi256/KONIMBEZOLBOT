@@ -187,10 +187,10 @@ def _clean_feature(text: str) -> str:
 
 async def scrape_product_async(url: str, page) -> dict | None:
     try:
-        await page.goto(url, wait_until="networkidle", timeout=25000)
+        await page.goto(url, wait_until="load", timeout=15000)
     except PWTimeout:
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            await page.goto(url, wait_until="domcontentloaded", timeout=10000)
         except Exception as e:
             logger.warning(f"Navigation failed for {url}: {e}")
             return None
@@ -305,6 +305,9 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
     exclude_urls = exclude_urls or set()
     seen_ever = seen_ever or set()
 
+    # Hard cap: never attempt more than this many URLs to stay within CI time limits
+    MAX_ATTEMPTS = 30
+
     products = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -337,12 +340,17 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
 
         truly_new_set = set(truly_new)
         new_found = 0
+        attempts = 0
         for url in target_urls:
+            if attempts >= MAX_ATTEMPTS:
+                logger.warning(f"Reached MAX_ATTEMPTS={MAX_ATTEMPTS} — stopping early")
+                break
             is_priority = url not in exclude_urls  # truly_new or unseen
             # Stop only when we have enough AND we've moved past priority URLs
             if len(products) >= count and not is_priority:
                 break
 
+            attempts += 1
             product = await scrape_product_async(url, page)
             if product:
                 src = product["source_url"]
@@ -357,7 +365,7 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
                     new_found += 1
                 logger.info(f"  {tag} {product['name'][:50]}")
 
-        logger.info(f"Collected {len(products)} products ({new_found} new, {len(products)-new_found} recycled)")
+        logger.info(f"Collected {len(products)} products ({new_found} new, {len(products)-new_found} recycled) after {attempts} attempts")
 
         await browser.close()
 
