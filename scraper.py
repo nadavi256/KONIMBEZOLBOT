@@ -187,10 +187,11 @@ def _clean_feature(text: str) -> str:
 
 async def scrape_product_async(url: str, page) -> dict | None:
     try:
-        await page.goto(url, wait_until="load", timeout=10000)
+        await page.goto(url, wait_until="networkidle", timeout=12000)
     except PWTimeout:
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=8000)
+            await page.wait_for_timeout(2000)  # give React time to render affiliate links
         except Exception as e:
             logger.warning(f"Navigation failed for {url}: {e}")
             return None
