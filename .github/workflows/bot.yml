@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: send-products
-  cancel-in-progress: false   # don't cancel running job, just queue
+  cancel-in-progress: true   # cancel any running job so new triggers always run fresh
 
 jobs:
   send-products:
@@ -44,6 +44,7 @@ jobs:
         run: playwright install-deps chromium
 
       - name: Send products to Telegram
+        timeout-minutes: 13
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: "-1002004379375"

@@ -187,10 +187,10 @@ def _clean_feature(text: str) -> str:
 
 async def scrape_product_async(url: str, page) -> dict | None:
     try:
-        await page.goto(url, wait_until="load", timeout=15000)
+        await page.goto(url, wait_until="load", timeout=10000)
     except PWTimeout:
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=10000)
+            await page.goto(url, wait_until="domcontentloaded", timeout=8000)
         except Exception as e:
             logger.warning(f"Navigation failed for {url}: {e}")
             return None
@@ -306,7 +306,7 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
     seen_ever = seen_ever or set()
 
     # Hard cap: never attempt more than this many URLs to stay within CI time limits
-    MAX_ATTEMPTS = 30
+    MAX_ATTEMPTS = 15
 
     products = []
     async with async_playwright() as p:
