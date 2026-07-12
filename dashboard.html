@@ -352,11 +352,10 @@ const catMeta = cat => CATS[cat] || { emoji:'📦', cls:'', color:'#3b82f6' };
 // ── Helpers ────────────────────────────────────────────────────────────
 const pad = n => String(n).padStart(2,'0');
 function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  return new Date().toLocaleDateString('sv-SE', {timeZone: 'Asia/Jerusalem'});
 }
 function dateKey(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  return d.toLocaleDateString('sv-SE', {timeZone: 'Asia/Jerusalem'});
 }
 function formatDate(d) {
   const [y,m,day] = d.split('-');
@@ -637,7 +636,7 @@ async function init() {
   let data;
   if (!IS_ARTIFACT) {
     try {
-      const r = await fetch(RAW_URL, {cache:'no-cache'});
+      const r = await fetch(RAW_URL + '?t=' + Date.now(), {cache:'no-store'});
       if (r.ok) data = await r.json();
     } catch(e) {}
   }
@@ -698,7 +697,9 @@ function updateLastUpdated() {
   const el = document.getElementById('last-updated');
   if (!el) return;
   const now = new Date();
-  el.textContent = `עודכן: ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const ilDate = now.toLocaleDateString('he-IL', {timeZone:'Asia/Jerusalem', day:'2-digit', month:'2-digit', year:'2-digit'});
+  const ilTime = now.toLocaleTimeString('he-IL', {timeZone:'Asia/Jerusalem', hour:'2-digit', minute:'2-digit'});
+  el.textContent = `עודכן: ${ilDate} ${ilTime}`;
 }
 
 function setRefreshCountdown() {
