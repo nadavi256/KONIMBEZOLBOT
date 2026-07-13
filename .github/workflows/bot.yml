@@ -2,13 +2,10 @@ name: Telegram Bot - Every 15 Minutes
 
 on:
   workflow_dispatch:   # cron-job.org trigger (primary)
-  schedule:
-    # Every 15 min, 09:00–21:45 Israel time = 06:00–18:45 UTC (UTC+3)
-    - cron: '0,15,30,45 6-18 * * *'
 
 concurrency:
   group: send-products
-  cancel-in-progress: true   # cancel any running job so new triggers always run fresh
+  cancel-in-progress: false   # don't cancel running job, just queue
 
 jobs:
   send-products:
