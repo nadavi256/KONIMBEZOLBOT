@@ -10,7 +10,7 @@ concurrency:
 jobs:
   send-products:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 18
 
     steps:
       - name: Checkout
@@ -28,25 +28,27 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ hashFiles('requirements.txt') }}
+          restore-keys: playwright-chromium-
+          save-always: true   # save cache even if later steps fail
 
       - name: Install dependencies
+        timeout-minutes: 3
         run: pip install -r requirements.txt
 
       - name: Install Playwright browser
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
         run: playwright install chromium --with-deps
 
       - name: Install Playwright system deps only (cache hit)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 3
         run: playwright install-deps chromium
 
-      - name: Send products to Telegram + WhatsApp
-        timeout-minutes: 13
+      - name: Send products to Telegram
+        timeout-minutes: 8
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: "-1002004379375"
           GH_PAT: ${{ secrets.GH_PAT }}
-          WHATSAPP_INSTANCE_ID: ${{ secrets.WHATSAPP_INSTANCE_ID }}
-          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
-          WHATSAPP_GROUP_IDS: ${{ secrets.WHATSAPP_GROUP_IDS }}
         run: python bot.py send-now

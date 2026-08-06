@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 import re
@@ -343,13 +344,13 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
         truly_new_set = set(truly_new)
         new_found = 0
         attempts = 0
-        deadline = time.time() + 360  # 6-minute budget for scraping
+        deadline = time.time() + 240  # 4-minute hard budget for scraping
         for url in target_urls:
             if attempts >= MAX_ATTEMPTS:
                 logger.warning(f"Reached MAX_ATTEMPTS={MAX_ATTEMPTS} — stopping early")
                 break
             if time.time() > deadline:
-                logger.warning("Scraping time budget (6 min) exceeded — stopping early")
+                logger.warning("Scraping time budget (4 min) exceeded — stopping early")
                 break
             is_priority = url not in exclude_urls  # truly_new or unseen
             # Stop only when we have enough AND we've moved past priority URLs
@@ -357,7 +358,14 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
                 break
 
             attempts += 1
-            product = await scrape_product_async(url, page)
+            try:
+                product = await asyncio.wait_for(
+                    scrape_product_async(url, page),
+                    timeout=12.0,  # hard 12s ceiling per URL (Playwright timeouts can hang)
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"Hard timeout (12s) hit for {url} — skipping")
+                product = None
             if product:
                 src = product["source_url"]
                 if src in truly_new_set:
