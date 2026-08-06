@@ -1,6 +1,7 @@
 import logging
 import random
 import re
+import time
 import requests
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
@@ -187,11 +188,11 @@ def _clean_feature(text: str) -> str:
 
 async def scrape_product_async(url: str, page) -> dict | None:
     try:
-        await page.goto(url, wait_until="networkidle", timeout=12000)
+        await page.goto(url, wait_until="networkidle", timeout=8000)
     except PWTimeout:
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=8000)
-            await page.wait_for_timeout(2000)  # give React time to render affiliate links
+            await page.goto(url, wait_until="domcontentloaded", timeout=5000)
+            await page.wait_for_timeout(1500)  # give React time to render affiliate links
         except Exception as e:
             logger.warning(f"Navigation failed for {url}: {e}")
             return None
@@ -307,7 +308,7 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
     seen_ever = seen_ever or set()
 
     # Hard cap: never attempt more than this many URLs to stay within CI time limits
-    MAX_ATTEMPTS = 15
+    MAX_ATTEMPTS = 8
 
     products = []
     async with async_playwright() as p:
@@ -342,9 +343,13 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
         truly_new_set = set(truly_new)
         new_found = 0
         attempts = 0
+        deadline = time.time() + 360  # 6-minute budget for scraping
         for url in target_urls:
             if attempts >= MAX_ATTEMPTS:
                 logger.warning(f"Reached MAX_ATTEMPTS={MAX_ATTEMPTS} — stopping early")
+                break
+            if time.time() > deadline:
+                logger.warning("Scraping time budget (6 min) exceeded — stopping early")
                 break
             is_priority = url not in exclude_urls  # truly_new or unseen
             # Stop only when we have enough AND we've moved past priority URLs
