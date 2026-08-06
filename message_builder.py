@@ -304,7 +304,7 @@ def build_whatsapp_message(product: dict) -> str:
     return "\n".join(lines)
 
 
-
+def build_daily_footer() -> str:
     options = [
         "❤️ <b>אהבתם?</b>\nשתפו עם חבר שאוהב לחסוך!\n\n🔔 <b>הצטרפו לערוץ</b> ואל תפספסו אף דיל!",
         "🏆 <b>קונים בזול. חיים יותר טוב.</b>\n\n❤️ שתפו חברים ותעשו להם טובה של החיים!",
