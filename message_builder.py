@@ -259,7 +259,52 @@ def build_message(product: dict, index: int = 1, total: int = 1) -> str:
     return "\n".join(lines)
 
 
-def build_daily_footer() -> str:
+def build_whatsapp_message(product: dict) -> str:
+    """Plain-text version of the deal message for WhatsApp (no HTML)."""
+    category  = product.get("category", "")
+    hooks     = HOOKS_BY_CATEGORY.get(category, HOOKS_DEFAULT)
+    openers   = OPENERS_BY_CATEGORY.get(category, OPENERS_DEFAULT)
+    hook      = random.choice(hooks)
+    opener    = random.choice(openers)
+    cat_emoji = CATEGORY_EMOJIS.get(category, "⭐")
+
+    name     = product.get("name", "מוצר מיוחד")
+    link     = product["aliexpress_link"]
+    features = product.get("features", [])
+    orders   = product.get("orders")
+    rating   = product.get("rating")
+
+    feature_lines = ""
+    if features:
+        bullets = []
+        for f in features[:5]:
+            f = f.strip().replace("/", "").replace("\\", "").replace("|", "")
+            f = " ".join(f.split()).strip(" :-–•·")
+            if f:
+                bullets.append(f"✅ {f}")
+        feature_lines = "\n".join(bullets)
+
+    if orders and rating:
+        stats_line = f"🏅 {orders} רכישות | דירוג {rating} ⭐"
+    elif orders:
+        stats_line = f"🏅 {orders} רכישות"
+    elif rating:
+        stats_line = f"🏅 דירוג {rating} ⭐"
+    else:
+        stats_line = None
+
+    lines = [hook, "", f"{cat_emoji} *{name}*", "", opener, ""]
+
+    if feature_lines:
+        lines += [feature_lines, ""]
+    if stats_line:
+        lines += [stats_line, ""]
+
+    lines.append(link)
+    return "\n".join(lines)
+
+
+
     options = [
         "❤️ <b>אהבתם?</b>\nשתפו עם חבר שאוהב לחסוך!\n\n🔔 <b>הצטרפו לערוץ</b> ואל תפספסו אף דיל!",
         "🏆 <b>קונים בזול. חיים יותר טוב.</b>\n\n❤️ שתפו חברים ותעשו להם טובה של החיים!",

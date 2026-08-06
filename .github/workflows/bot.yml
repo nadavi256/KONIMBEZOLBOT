@@ -40,10 +40,13 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: playwright install-deps chromium
 
-      - name: Send products to Telegram
+      - name: Send products to Telegram + WhatsApp
         timeout-minutes: 13
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: "-1002004379375"
           GH_PAT: ${{ secrets.GH_PAT }}
+          WHATSAPP_INSTANCE_ID: ${{ secrets.WHATSAPP_INSTANCE_ID }}
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
+          WHATSAPP_GROUP_IDS: ${{ secrets.WHATSAPP_GROUP_IDS }}
         run: python bot.py send-now
