@@ -13,8 +13,7 @@ from telegram.error import TelegramError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from scraper import get_products
-from message_builder import build_message, build_daily_footer, build_whatsapp_message
-from whatsapp import send_to_all_groups, is_configured as wa_configured
+from message_builder import build_message, build_daily_footer
 from sent_tracker import load_sent, save_sent
 from known_tracker import load_seen_ever, save_seen_ever
 from daily_log import log_product, load_recent_urls
@@ -145,17 +144,10 @@ async def send_hourly_products():
     for i, product in enumerate(valid_products, start=1):
         text = build_message(product, i, count)
         ok = await send_with_retry(bot, text, product.get("image_url"))
-        logger.info(f"{'✅' if ok else '❌'} Telegram [{i}/{count}] {product['name'][:55]}")
+        logger.info(f"{'✅' if ok else '❌'} [{i}/{count}] {product['name'][:55]}")
         if ok:
             newly_sent.add(product["source_url"])
             log_product(product)
-
-        # WhatsApp — send same deal to all groups (plain text)
-        if wa_configured():
-            wa_text = build_whatsapp_message(product)
-            wa_ok = send_to_all_groups(wa_text)
-            logger.info(f"WhatsApp: sent to {wa_ok}/{len(__import__('whatsapp').GROUP_IDS)} groups")
-
         if i < count:
             await asyncio.sleep(random.randint(3, 7))
 
