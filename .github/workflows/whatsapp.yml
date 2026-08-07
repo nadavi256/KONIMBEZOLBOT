@@ -1,7 +1,7 @@
 name: WhatsApp Bot - Every 20 Minutes
 
 on:
-  workflow_dispatch:   # triggered by cron-job.org (secondary cron)
+  workflow_dispatch:
   schedule:
     # Every 20 min, 09:00–21:40 Israel time = 06:00–18:40 UTC (UTC+3)
     - cron: '0,20,40 6-18 * * *'
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   send-whatsapp:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 18
 
     steps:
       - name: Checkout
@@ -31,20 +31,25 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ hashFiles('requirements.txt') }}
+          restore-keys: playwright-chromium-
+          save-always: true
 
       - name: Install dependencies
+        timeout-minutes: 3
         run: pip install -r requirements.txt
 
       - name: Install Playwright browser
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
         run: playwright install chromium --with-deps
 
       - name: Install Playwright system deps only (cache hit)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 3
         run: playwright install-deps chromium
 
       - name: Send products to WhatsApp groups
-        timeout-minutes: 13
+        timeout-minutes: 8
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
           WHATSAPP_INSTANCE_ID: ${{ secrets.WHATSAPP_INSTANCE_ID }}
