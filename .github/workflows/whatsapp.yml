@@ -1,10 +1,15 @@
-name: WhatsApp Bot - Every 20 Minutes
+name: WhatsApp Bot - Ramped
 
 on:
   workflow_dispatch:
   schedule:
-    # Every 20 min, 09:00–21:40 Israel time = 06:00–18:40 UTC (UTC+3)
-    - cron: '0,20,40 6-18 * * *'
+    # Fires every 15 min, 09:00-21:45 Israel time (UTC+3) — the cadence
+    # needed for the eventual target of 4 sends/hour/group. bot_whatsapp.py
+    # decides on EACH trigger whether to actually send, based on a volume
+    # ramp that starts low for a brand-new number and rises to the full
+    # target over ~2 weeks (see whatsapp_warmup.py) — most triggers during
+    # the ramp period are expected no-ops by design, not failures.
+    - cron: '0,15,30,45 6-18 * * *'
 
 concurrency:
   group: whatsapp-send
@@ -45,10 +50,11 @@ jobs:
 
 
       - name: Send products to WhatsApp groups
-        timeout-minutes: 8
+        timeout-minutes: 12
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
           WHATSAPP_INSTANCE_ID: ${{ secrets.WHATSAPP_INSTANCE_ID }}
           WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
           WHATSAPP_GROUP_IDS: ${{ secrets.WHATSAPP_GROUP_IDS }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python bot_whatsapp.py
