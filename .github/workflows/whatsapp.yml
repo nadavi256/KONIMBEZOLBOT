@@ -1,18 +1,15 @@
-name: WhatsApp Bot - 5x Daily
+name: WhatsApp Bot - Ramped
 
 on:
   workflow_dispatch:
   schedule:
-    # 5 fixed, non-round times/day (Israel time, UTC+3) instead of a tight
-    # 20-min loop — a WhatsApp account sending on a dense fixed interval to
-    # multiple groups reads as automated. Times are IL 09:41 / 12:17 /
-    # 14:53 / 17:26 / 20:08, converted to UTC below. A per-run daily cap in
-    # bot_whatsapp.py (WHATSAPP_DAILY_CAP) is the hard backstop.
-    - cron: '41 6 * * *'
-    - cron: '17 9 * * *'
-    - cron: '53 11 * * *'
-    - cron: '26 14 * * *'
-    - cron: '8 17 * * *'
+    # Fires every 15 min, 09:00-21:45 Israel time (UTC+3) — the cadence
+    # needed for the eventual target of 4 sends/hour/group. bot_whatsapp.py
+    # decides on EACH trigger whether to actually send, based on a volume
+    # ramp that starts low for a brand-new number and rises to the full
+    # target over ~2 weeks (see whatsapp_warmup.py) — most triggers during
+    # the ramp period are expected no-ops by design, not failures.
+    - cron: '0,15,30,45 6-18 * * *'
 
 concurrency:
   group: whatsapp-send

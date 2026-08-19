@@ -11,7 +11,8 @@ from dotenv import load_dotenv
 from scraper import get_products
 from message_builder import build_whatsapp_message
 from whatsapp import send_to_all_groups, is_configured, GROUP_IDS
-from whatsapp_tracker import load_wa_sent, save_wa_sent, get_daily_send_count, record_daily_send
+from whatsapp_tracker import load_wa_sent, save_wa_sent, get_daily_state, record_daily_send, get_or_start_warmup
+from whatsapp_warmup import compute_daily_cap, compute_min_gap_minutes
 from known_tracker import load_seen_ever
 
 load_dotenv()
@@ -26,15 +27,13 @@ logger = logging.getLogger(__name__)
 IL_TZ = pytz.timezone("Asia/Jerusalem")
 PRODUCTS_PER_RUN = 1
 
-# Hard daily cap on WhatsApp runs (each run = 1 message to every group).
-# Kept low and independent of the workflow's trigger schedule so a stray
-# extra trigger can never push the groups into spam-like daily volume —
-# see the safety writeup for why this matters more than the exact schedule.
-DAILY_SEND_CAP = int(os.environ.get("WHATSAPP_DAILY_CAP", "6"))
-
 # Startup jitter: don't fire at the exact same second the workflow trigger
 # fired every time — a perfectly regular cadence is itself a bot signature.
 STARTUP_JITTER_MAX_SECONDS = 90
+
+# Small tolerance so a run that's a minute or two early (jitter, scraping
+# time) doesn't get skipped over a near-miss on the spacing requirement.
+GAP_TOLERANCE_MINUTES = 2
 
 
 async def send_whatsapp_products():
@@ -47,16 +46,35 @@ async def send_whatsapp_products():
         logger.error("WhatsApp not configured — missing secrets")
         return
 
-    sent_today = get_daily_send_count()
-    if sent_today >= DAILY_SEND_CAP:
-        logger.info(f"Daily cap reached ({sent_today}/{DAILY_SEND_CAP}) — skipping")
+    warmup_start = get_or_start_warmup()
+    days_since_start = (il_time.date() - datetime.strptime(warmup_start, "%Y-%m-%d").date()).days
+    daily_cap = compute_daily_cap(days_since_start)
+    min_gap_minutes = compute_min_gap_minutes(daily_cap)
+
+    state = get_daily_state()
+    sent_today, last_sent_at = state["count"], state["last_sent_at"]
+
+    if sent_today >= daily_cap:
+        logger.info(f"Daily cap reached ({sent_today}/{daily_cap}, ramp day {days_since_start}) — skipping")
         return
+
+    if last_sent_at:
+        minutes_since_last = (il_time - datetime.fromisoformat(last_sent_at)).total_seconds() / 60
+        if minutes_since_last < min_gap_minutes - GAP_TOLERANCE_MINUTES:
+            logger.info(
+                f"Too soon since last send ({minutes_since_last:.0f}m of {min_gap_minutes:.0f}m "
+                f"required at today's pace) — skipping"
+            )
+            return
 
     jitter = random.randint(0, STARTUP_JITTER_MAX_SECONDS)
     logger.info(f"Startup jitter: waiting {jitter}s…")
     await asyncio.sleep(jitter)
 
-    logger.info(f"=== WhatsApp send started | {len(GROUP_IDS)} groups | {sent_today}/{DAILY_SEND_CAP} today ===")
+    logger.info(
+        f"=== WhatsApp send started | {len(GROUP_IDS)} groups | {sent_today}/{daily_cap} today "
+        f"(ramp day {days_since_start}) ==="
+    )
 
     sent_urls, sent_ordered = load_wa_sent()
     seen_ever = load_seen_ever()

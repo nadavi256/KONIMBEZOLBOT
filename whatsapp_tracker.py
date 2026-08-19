@@ -15,6 +15,8 @@ FILE_PATH = "whatsapp_sent.json"
 API_URL = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
 DAILY_FILE_PATH = "whatsapp_daily.json"
 DAILY_API_URL = f"https://api.github.com/repos/{REPO}/contents/{DAILY_FILE_PATH}"
+WARMUP_FILE_PATH = "whatsapp_warmup.json"
+WARMUP_API_URL = f"https://api.github.com/repos/{REPO}/contents/{WARMUP_FILE_PATH}"
 HEADERS = {
     "Authorization": f"token {GH_PAT}",
     "Accept": "application/vnd.github.v3+json",
@@ -66,33 +68,35 @@ def save_wa_sent(ordered: list) -> None:
         logger.error(f"Failed to save whatsapp_sent.json: {e}")
 
 
-def get_daily_send_count() -> int:
-    """How many WhatsApp runs already sent today (Israel time).
-
-    Used as a hard safety cap so a stray extra trigger (manual re-run,
-    workflow misfire) can't push the group past a human-like daily volume,
-    independent of how often the workflow itself is scheduled.
-    """
+def get_daily_state() -> dict:
+    """Today's send count and last-send timestamp (Israel time), or zeros/None
+    if nothing has been sent yet today. Used both as a hard daily cap and to
+    space sends evenly across the day (see whatsapp_warmup.compute_min_gap)."""
+    empty = {"count": 0, "last_sent_at": None}
     if not GH_PAT:
-        return 0
+        return empty
     today = datetime.now(IL_TZ).strftime("%Y-%m-%d")
     try:
         r = requests.get(DAILY_API_URL, headers=HEADERS, timeout=10)
         if r.status_code == 404:
-            return 0
+            return empty
         r.raise_for_status()
         data = json.loads(base64.b64decode(r.json()["content"]).decode("utf-8"))
-        return data.get("count", 0) if data.get("date") == today else 0
+        if data.get("date") != today:
+            return empty
+        return {"count": data.get("count", 0), "last_sent_at": data.get("last_sent_at")}
     except Exception as e:
         logger.error(f"Failed to load whatsapp_daily.json: {e}")
-        return 0
+        return empty
 
 
 def record_daily_send() -> None:
-    """Increment today's send counter (resets automatically on a new day)."""
+    """Increment today's send counter and stamp the send time (resets
+    automatically on a new day)."""
     if not GH_PAT:
         return
-    today = datetime.now(IL_TZ).strftime("%Y-%m-%d")
+    now = datetime.now(IL_TZ)
+    today = now.strftime("%Y-%m-%d")
     try:
         sha = None
         count = 0
@@ -105,7 +109,10 @@ def record_daily_send() -> None:
                 count = existing.get("count", 0)
 
         content_b64 = base64.b64encode(
-            json.dumps({"date": today, "count": count + 1}, ensure_ascii=False).encode("utf-8")
+            json.dumps(
+                {"date": today, "count": count + 1, "last_sent_at": now.isoformat()},
+                ensure_ascii=False,
+            ).encode("utf-8")
         ).decode("utf-8")
         payload = {
             "message": "chore: update WhatsApp daily send count",
@@ -119,3 +126,39 @@ def record_daily_send() -> None:
         logger.info(f"WhatsApp daily send count: {count + 1}")
     except Exception as e:
         logger.error(f"Failed to save whatsapp_daily.json: {e}")
+
+
+def get_or_start_warmup() -> str:
+    """Return the date (YYYY-MM-DD, Israel time) automated WhatsApp sending
+    first ran — creating and persisting it on first-ever call. This is the
+    clock the volume ramp-up (whatsapp_warmup.py) counts from, so a brand
+    new number always starts at the lowest ramp stage regardless of when
+    this code was deployed."""
+    today = datetime.now(IL_TZ).strftime("%Y-%m-%d")
+    if not GH_PAT:
+        return today
+    try:
+        r = requests.get(WARMUP_API_URL, headers=HEADERS, timeout=10)
+        if r.status_code == 200:
+            data = json.loads(base64.b64decode(r.json()["content"]).decode("utf-8"))
+            if data.get("start_date"):
+                return data["start_date"]
+    except Exception as e:
+        logger.error(f"Failed to load whatsapp_warmup.json: {e}")
+        return today
+
+    try:
+        content_b64 = base64.b64encode(
+            json.dumps({"start_date": today}, ensure_ascii=False).encode("utf-8")
+        ).decode("utf-8")
+        payload = {
+            "message": "chore: start WhatsApp warm-up ramp",
+            "content": content_b64,
+            "committer": {"name": "bot", "email": "bot@bot.com"},
+        }
+        r2 = requests.put(WARMUP_API_URL, headers=HEADERS, json=payload, timeout=15)
+        r2.raise_for_status()
+        logger.info(f"WhatsApp warm-up ramp started: {today}")
+    except Exception as e:
+        logger.error(f"Failed to save whatsapp_warmup.json: {e}")
+    return today
