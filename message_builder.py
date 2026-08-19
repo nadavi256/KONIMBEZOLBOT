@@ -273,6 +273,7 @@ def build_whatsapp_message(product: dict) -> str:
     features = product.get("features", [])
     orders   = product.get("orders")
     rating   = product.get("rating")
+    price    = product.get("price")
 
     feature_lines = ""
     if features:
@@ -293,7 +294,10 @@ def build_whatsapp_message(product: dict) -> str:
     else:
         stats_line = None
 
-    lines = [hook, "", f"{cat_emoji} *{name}*", "", opener, ""]
+    lines = [hook, "", f"{cat_emoji} *{name}*", ""]
+    if price:
+        lines += [f"💰 מחיר: {price}", ""]
+    lines += [opener, ""]
 
     if feature_lines:
         lines += [feature_lines, ""]

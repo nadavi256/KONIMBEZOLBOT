@@ -134,8 +134,15 @@ def _resolve_affiliate_url(url: str) -> str | None:
 
 
 async def _get_aliexpress_stats(ali_url: str, page) -> dict:
-    """Scrape purchase count and rating from AliExpress product page."""
-    stats = {"orders": None, "rating": None}
+    """Scrape price, purchase count and rating from an AliExpress product page.
+
+    Best-effort only — AliExpress's markup isn't scraped via stable CSS
+    selectors here (same house style as the rest of this file), so this
+    runs on a dedicated tab with its own timeout and never raises: any
+    field it can't confidently find comes back None rather than a guess,
+    so a bad extraction can't turn into a wrong claim in a deal message.
+    """
+    stats = {"orders": None, "rating": None, "price": None}
     try:
         await page.goto(ali_url, wait_until="domcontentloaded", timeout=25000)
         await page.wait_for_timeout(4000)
@@ -166,6 +173,16 @@ async def _get_aliexpress_stats(ali_url: str, page) -> dict:
         if rating_match:
             stats["rating"] = rating_match.group(1)
 
+        # Price: currency symbol + amount, near the top of the page (the
+        # buy panel) — searching only the first slice avoids picking up
+        # unrelated prices from "you may also like" sections further down.
+        price_match = re.search(
+            r"(?:US\s?\$|[\$₪€£])\s?(\d+(?:[.,]\d{1,2})?)",
+            body[:3000]
+        )
+        if price_match:
+            stats["price"] = price_match.group(0).strip()
+
     except Exception as e:
         logger.debug(f"AliExpress stats fetch failed: {e}")
     return stats
@@ -187,7 +204,7 @@ def _clean_feature(text: str) -> str:
     return text.strip(" :-–•·")
 
 
-async def scrape_product_async(url: str, page) -> dict | None:
+async def scrape_product_async(url: str, page, stats_page=None) -> dict | None:
     try:
         await page.goto(url, wait_until="networkidle", timeout=8000)
     except PWTimeout:
@@ -287,6 +304,17 @@ async def scrape_product_async(url: str, page) -> dict | None:
                 if len(features) >= 5:
                     break
 
+        stats = {"orders": None, "rating": None, "price": None}
+        if stats_page is not None:
+            try:
+                stats = await asyncio.wait_for(
+                    _get_aliexpress_stats(ali_link, stats_page), timeout=7.0
+                )
+            except asyncio.TimeoutError:
+                logger.debug(f"AliExpress stats timed out for {ali_link}")
+            except Exception as e:
+                logger.debug(f"AliExpress stats error for {ali_link}: {e}")
+
         return {
             "name": name,
             "features": features[:6],
@@ -294,8 +322,9 @@ async def scrape_product_async(url: str, page) -> dict | None:
             "image_url": image_url,
             "category": _category_from_product(url, name),
             "source_url": url,
-            "orders": None,
-            "rating": None,
+            "orders": stats["orders"],
+            "rating": stats["rating"],
+            "price": stats["price"],
         }
 
     except Exception as e:
@@ -304,12 +333,21 @@ async def scrape_product_async(url: str, page) -> dict | None:
 
 
 async def get_products(count: int = 12, exclude_urls: set | None = None,
-                       seen_ever: set | None = None) -> list[dict]:
+                       seen_ever: set | None = None, fetch_stats: bool = False) -> list[dict]:
+    """Scrape up to `count` products from the site.
+
+    `fetch_stats=True` additionally visits each product's AliExpress page
+    (on its own browser tab, separate from the one used to read the site
+    itself) to pull price/rating/order-count — opt-in and off by default
+    so callers that don't need it (the Telegram bot) get the exact same
+    behavior and timing as before.
+    """
     exclude_urls = exclude_urls or set()
     seen_ever = seen_ever or set()
 
     # Hard cap: never attempt more than this many URLs to stay within CI time limits
     MAX_ATTEMPTS = 8
+    per_url_timeout = 20.0 if fetch_stats else 12.0
 
     products = []
     async with async_playwright() as p:
@@ -319,6 +357,7 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         )
         page = await ctx.new_page()
+        stats_page = await ctx.new_page() if fetch_stats else None
 
         all_urls = get_all_product_urls_from_api()
 
@@ -360,11 +399,11 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
             attempts += 1
             try:
                 product = await asyncio.wait_for(
-                    scrape_product_async(url, page),
-                    timeout=12.0,  # hard 12s ceiling per URL (Playwright timeouts can hang)
+                    scrape_product_async(url, page, stats_page=stats_page),
+                    timeout=per_url_timeout,  # hard ceiling per URL (Playwright timeouts can hang)
                 )
             except asyncio.TimeoutError:
-                logger.warning(f"Hard timeout (12s) hit for {url} — skipping")
+                logger.warning(f"Hard timeout ({per_url_timeout:.0f}s) hit for {url} — skipping")
                 product = None
             if product:
                 src = product["source_url"]
@@ -381,6 +420,8 @@ async def get_products(count: int = 12, exclude_urls: set | None = None,
 
         logger.info(f"Collected {len(products)} products ({new_found} new, {len(products)-new_found} recycled) after {attempts} attempts")
 
+        if stats_page is not None:
+            await stats_page.close()
         await browser.close()
 
     logger.info(f"Scraped {len(products)}/{count} products")
