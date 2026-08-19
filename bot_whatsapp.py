@@ -85,6 +85,7 @@ async def send_whatsapp_products():
             count=PRODUCTS_PER_RUN * 6,
             exclude_urls=sent_urls,
             seen_ever=seen_ever,
+            fetch_stats=True,
         )
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
