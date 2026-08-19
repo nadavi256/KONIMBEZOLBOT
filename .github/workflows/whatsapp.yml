@@ -43,10 +43,6 @@ jobs:
         timeout-minutes: 10
         run: playwright install chromium --with-deps
 
-      - name: Install Playwright system deps only (cache hit)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 6
-        run: playwright install-deps chromium
 
       - name: Send products to WhatsApp groups
         timeout-minutes: 8
