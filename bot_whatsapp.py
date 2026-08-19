@@ -14,6 +14,7 @@ from whatsapp import send_to_all_groups, is_configured, GROUP_IDS
 from whatsapp_tracker import load_wa_sent, save_wa_sent, get_daily_state, record_daily_send, get_or_start_warmup
 from whatsapp_warmup import compute_daily_cap, compute_min_gap_minutes
 from known_tracker import load_seen_ever
+from copywriter import generate_whatsapp_copy
 
 load_dotenv()
 
@@ -95,7 +96,12 @@ async def send_whatsapp_products():
         return
 
     product = valid[0]
-    ok = send_to_all_groups(lambda: build_whatsapp_message(product))
+
+    def build_message() -> tuple[str, str | None]:
+        text = generate_whatsapp_copy(product) or build_whatsapp_message(product)
+        return text, product.get("image_url")
+
+    ok = send_to_all_groups(build_message)
     logger.info(f"Sent to {ok}/{len(GROUP_IDS)} WhatsApp groups: {product['name'][:55]}")
 
     if ok > 0:

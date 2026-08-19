@@ -42,14 +42,33 @@ def send_to_group(chat_id: str, text: str) -> bool:
         return False
 
 
-def send_to_all_groups(build_text: Callable[[], str]) -> int:
+def send_image_to_group(chat_id: str, image_url: str, caption: str) -> bool:
+    if not is_configured():
+        return False
+    url = f"{BASE_URL}/sendFileByUrl/{API_TOKEN}"
+    try:
+        r = requests.post(
+            url,
+            json={"chatId": chat_id, "urlFile": image_url, "fileName": "deal.jpg", "caption": caption},
+            timeout=20,
+        )
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        logger.error(f"WhatsApp image send failed to {chat_id}: {e}")
+        return False
+
+
+def send_to_all_groups(build_message: Callable[[], tuple[str, str | None]]) -> int:
     """Send a message to all configured groups, paced like a human sender.
 
-    `build_text` is called once per group so each group gets an
-    independently-generated message (varied hook/opener) instead of one
-    identical string broadcast to all of them. Groups are shuffled and
-    separated by a randomized delay so the run doesn't look like a
-    synchronized blast. Returns count of successes.
+    `build_message` is called once per group and returns (text, image_url) —
+    called fresh per group so each one gets an independently-generated
+    message instead of one identical string broadcast to all of them.
+    Groups are shuffled and separated by a randomized delay so the run
+    doesn't look like a synchronized blast. When an image URL is given, it's
+    sent as a photo with the text as caption (falling back to text-only if
+    the image send fails). Returns count of successes.
     """
     if not is_configured():
         logger.warning("WhatsApp not configured — skipping")
@@ -58,8 +77,11 @@ def send_to_all_groups(build_text: Callable[[], str]) -> int:
     random.shuffle(groups)
     success = 0
     for i, gid in enumerate(groups):
-        text = build_text()
-        if send_to_group(gid, text):
+        text, image_url = build_message()
+        ok = send_image_to_group(gid, image_url, text) if image_url else False
+        if not ok:
+            ok = send_to_group(gid, text)
+        if ok:
             logger.info(f"✅ WhatsApp sent to {gid}")
             success += 1
         else:
