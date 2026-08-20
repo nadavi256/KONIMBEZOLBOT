@@ -213,44 +213,14 @@ canvas { display: block; width: 100% !important; }
 
 .empty { padding: 40px 20px; text-align: center; color: var(--ink-3); font-size: .85rem; }
 
-/* Section divider */
-.section-divider {
-  display: flex; align-items: center; gap: 12px; margin: 8px 0 -4px;
+/* Nav pills (switch between Telegram / WhatsApp dashboards) */
+.nav-pills { display: flex; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+.nav-pill {
+  font-size: .78rem; font-weight: 600; padding: 5px 12px; border-radius: 6px;
+  color: var(--ink-2); text-decoration: none; transition: background .1s, color .1s;
 }
-.section-divider h2 { font-size: 1rem; font-weight: 700; white-space: nowrap; }
-.section-divider .line { flex: 1; height: 1px; background: var(--border); }
-.section-divider .sub { font-size: .75rem; color: var(--ink-3); white-space: nowrap; }
-
-/* Ramp progress bar */
-.ramp-track { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 8px; }
-.ramp-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #22c55e); border-radius: 3px; transition: width .3s; }
-
-/* WhatsApp deal card (with image) */
-.wa-deal-item { display: flex; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--border); align-items: flex-start; transition: background .1s; }
-.wa-deal-item:last-child { border-bottom: none; }
-.wa-deal-item:hover { background: var(--surface2); }
-.wa-thumb {
-  width: 52px; height: 52px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
-  background: var(--surface2); border: 1px solid var(--border);
-}
-.wa-thumb-empty {
-  width: 52px; height: 52px; border-radius: 8px; flex-shrink: 0;
-  background: var(--surface2); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--ink-3);
-}
-.wa-info { flex: 1; min-width: 0; }
-.wa-top-row { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; }
-.wa-name { font-size: .86rem; font-weight: 600; color: var(--ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; text-align: right; flex: 1; }
-.wa-time { font-family: var(--mono); font-size: .72rem; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.wa-badges { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-.wa-badge { font-size: .68rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
-.badge-price { background: rgba(22,163,74,.1); color: var(--success); }
-.badge-rating { background: rgba(217,119,6,.1); color: var(--warning); }
-.badge-orders { background: var(--surface2); color: var(--ink-2); border: 1px solid var(--border); }
-.badge-source-ai { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
-.badge-source-template { background: var(--surface2); color: var(--ink-3); border: 1px solid var(--border); }
-.wa-link { font-size: .68rem; color: var(--ink-3); }
-.wa-link:hover { color: var(--accent); }
+.nav-pill:hover { text-decoration: none; background: var(--surface); }
+.nav-pill.active { background: var(--accent); color: #fff; }
 
 @media (max-width: 800px) {
   .kpi-row { grid-template-columns: repeat(3, 1fr); }
@@ -272,6 +242,10 @@ canvas { display: block; width: 100% !important; }
     <div><h1>Konimbezol Bot <span>לוח בקרה</span></h1></div>
   </div>
   <div class="header-right">
+    <nav class="nav-pills">
+      <span class="nav-pill active">🛍 טלגרם</span>
+      <a class="nav-pill" href="dashboard-whatsapp.html">💬 וואטסאפ</a>
+    </nav>
     <div class="status-dot">בוט פעיל</div>
     <span id="last-updated" style="font-size:.74rem;color:var(--ink-3);"></span>
     <button class="theme-toggle" id="refresh-btn" onclick="manualRefresh()">↻ רענן</button>
@@ -358,45 +332,6 @@ canvas { display: block; width: 100% !important; }
     </div>
 
     <div class="history-section" id="history-section"><div class="empty">טוען…</div></div>
-  </div>
-
-  <!-- WhatsApp section -->
-  <div class="section-divider">
-    <h2>💬 וואטסאפ</h2>
-    <div class="line"></div>
-    <span class="sub" id="wa-ramp-sub">—</span>
-  </div>
-
-  <div class="kpi-row">
-    <div class="kpi">
-      <div class="kpi-label">נשלחו היום</div>
-      <div class="kpi-value accent" id="wa-kpi-sent">—</div>
-      <div class="kpi-sub" id="wa-kpi-sent-sub">—</div>
-      <div class="ramp-track"><div class="ramp-fill" id="wa-ramp-fill" style="width:0%"></div></div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">יום ברמפ</div>
-      <div class="kpi-value" id="wa-kpi-day">—</div>
-      <div class="kpi-sub">מתוך 14 (חימום מספר חדש)</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">מרווח מינימלי</div>
-      <div class="kpi-value" id="wa-kpi-gap">—</div>
-      <div class="kpi-sub">בין שליחה לשליחה</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">שליחה אחרונה</div>
-      <div class="kpi-value" id="wa-kpi-last" style="font-size:1.3rem;">—</div>
-      <div class="kpi-sub" id="wa-kpi-last-sub">—</div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-header">
-      <span class="panel-title">📤 דילים שנשלחו לוואטסאפ (7 ימים אחרונים)</span>
-      <span class="panel-meta" id="wa-feed-count">—</span>
-    </div>
-    <div class="panel-body" id="wa-feed-body"><div class="empty">טוען…</div></div>
   </div>
 </main>
 </div>
@@ -706,122 +641,6 @@ const MOCK_DATA = [
   {date:"2026-07-01",time:"09:15",name:"Xinzuo 8.5 inch Chef Knife",category:"מוצרי מטבח",url:"https://konimbezol.co.il/product/xinzuo-chef-knife",link:"https://s.click.aliexpress.com/e/_f2"},
 ];
 
-// ── WhatsApp: ramp math (mirrors whatsapp_warmup.py) ───────────────────
-const WA_ACTIVE_WINDOW_MIN = 13 * 60;
-const WA_START_CAP = 6;
-const WA_TARGET_CAP = 52;
-const WA_RAMP_DAYS = 14;
-
-function waComputeDailyCap(daysSinceStart) {
-  daysSinceStart = Math.max(0, daysSinceStart);
-  if (daysSinceStart >= WA_RAMP_DAYS) return WA_TARGET_CAP;
-  const progress = daysSinceStart / WA_RAMP_DAYS;
-  return Math.round(WA_START_CAP + (WA_TARGET_CAP - WA_START_CAP) * progress);
-}
-function waComputeMinGap(cap) { return cap > 0 ? Math.round(WA_ACTIVE_WINDOW_MIN / cap) : null; }
-function waDaysBetween(fromKey, toKey) {
-  return Math.round((new Date(toKey) - new Date(fromKey)) / 86400000);
-}
-
-const WA_MOCK_LOG = [
-  {date:"2026-08-20",time:"12:32",name:"מחסניות אחסון למגירת מטבח",category:"מוצרי מטבח",link:"https://s.click.aliexpress.com/e/_a1",image:"",price:"מ-13 ₪",rating:"4.7",orders:"2000+",copy_source:"ai",groups_sent:1},
-  {date:"2026-08-20",time:"09:07",name:"תאורת לילה עם חיישן תנועה LED",category:"בית וגן",link:"https://s.click.aliexpress.com/e/_a2",image:"",price:"מ-11 ₪",rating:"4.6",orders:"1500+",copy_source:"ai",groups_sent:1},
-];
-const WA_MOCK_DAILY = {date: todayKey(), count: 4, last_sent_at: new Date().toISOString()};
-const WA_MOCK_WARMUP = {start_date: (() => { const d=new Date(); d.setDate(d.getDate()-1); return dateKey(d); })()};
-
-function waCopySourceBadge(src) {
-  return src === 'ai'
-    ? '<span class="wa-badge badge-source-ai">✨ AI</span>'
-    : '<span class="wa-badge badge-source-template">📋 תבנית</span>';
-}
-
-function renderWaFeed(items) {
-  const el = document.getElementById('wa-feed-body');
-  const countEl = document.getElementById('wa-feed-count');
-  if (!items || !items.length) {
-    el.innerHTML = '<div class="empty">עוד לא נשלחו דילים לוואטסאפ</div>';
-    countEl.textContent = '';
-    return;
-  }
-  const sorted = [...items].sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
-  countEl.textContent = `${sorted.length} דילים`;
-  el.innerHTML = sorted.map(item => {
-    const thumb = item.image
-      ? `<img class="wa-thumb" src="${item.image}" loading="lazy" alt="">`
-      : `<div class="wa-thumb-empty">📦</div>`;
-    const badges = [];
-    if (item.price) badges.push(`<span class="wa-badge badge-price">💰 ${item.price}</span>`);
-    if (item.rating) badges.push(`<span class="wa-badge badge-rating">⭐ ${item.rating}</span>`);
-    if (item.orders) badges.push(`<span class="wa-badge badge-orders">${item.orders} הזמנות</span>`);
-    badges.push(waCopySourceBadge(item.copy_source));
-    return `<div class="wa-deal-item">
-      ${thumb}
-      <div class="wa-info">
-        <div class="wa-top-row">
-          <span class="wa-name">${item.name}</span>
-          <span class="wa-time">${formatDate(item.date)} ${item.time||''}</span>
-        </div>
-        <div class="wa-badges">
-          ${badges.join('')}
-          ${item.link ? `<a class="wa-link" href="${item.link}" target="_blank" rel="noopener">↗ AliExpress</a>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderWaRamp(dailyState, warmupState) {
-  const today = todayKey();
-  const startDate = (warmupState && warmupState.start_date) || today;
-  const daysSince = waDaysBetween(startDate, today);
-  const cap = waComputeDailyCap(daysSince);
-  const gap = waComputeMinGap(cap);
-  const sentToday = (dailyState && dailyState.date === today) ? (dailyState.count || 0) : 0;
-  const lastSentAt = (dailyState && dailyState.date === today) ? dailyState.last_sent_at : null;
-
-  document.getElementById('wa-ramp-sub').textContent =
-    daysSince >= WA_RAMP_DAYS ? 'קצב מלא הושג 🎉' : `מתחמם — יעד מלא בעוד ${WA_RAMP_DAYS - daysSince} ימים`;
-  document.getElementById('wa-kpi-sent').textContent = `${sentToday} / ${cap}`;
-  document.getElementById('wa-kpi-sent-sub').textContent = `${sentToday >= cap ? 'המכסה היומית מוצתה' : 'עוד ' + (cap-sentToday) + ' היום'}`;
-  document.getElementById('wa-ramp-fill').style.width = Math.min(100, Math.round(sentToday/cap*100)) + '%';
-  document.getElementById('wa-kpi-day').textContent = Math.max(0, daysSince);
-  document.getElementById('wa-kpi-gap').textContent = gap ? `${gap} דק'` : '—';
-  if (lastSentAt) {
-    const d = new Date(lastSentAt);
-    document.getElementById('wa-kpi-last').textContent = d.toLocaleTimeString('he-IL', {timeZone:'Asia/Jerusalem', hour:'2-digit', minute:'2-digit'});
-    document.getElementById('wa-kpi-last-sub').textContent = 'שעון ישראל';
-  } else {
-    document.getElementById('wa-kpi-last').textContent = '—';
-    document.getElementById('wa-kpi-last-sub').textContent = 'עדיין לא נשלח היום';
-  }
-}
-
-async function fetchJson(url, isArtifact, mock, empty) {
-  // Mock data is only ever shown in an artifact preview (CSP blocks the
-  // real fetch there). On the real deployed page, a failed/missing fetch
-  // means "genuinely no data yet" and must render as empty, not fake data.
-  if (isArtifact) return mock;
-  try {
-    const r = await fetch(url + '?t=' + Date.now(), {cache:'no-store'});
-    if (r.ok) return await r.json();
-  } catch(e) {}
-  return empty;
-}
-
-async function initWhatsApp(isArtifact) {
-  const base = 'https://raw.githubusercontent.com/nadavi256/KONIMBEZOLBOT/main/';
-  const [log, daily, warmup] = await Promise.all([
-    fetchJson(base + 'whatsapp_daily_log.json', isArtifact, WA_MOCK_LOG, []),
-    fetchJson(base + 'whatsapp_daily.json', isArtifact, WA_MOCK_DAILY, null),
-    fetchJson(base + 'whatsapp_warmup.json', isArtifact, WA_MOCK_WARMUP, null),
-  ]);
-  const cutoff = (() => { const d = new Date(); d.setDate(d.getDate()-6); return dateKey(d); })();
-  const recent = (Array.isArray(log) ? log : []).filter(i => i.date >= cutoff);
-  renderWaFeed(recent);
-  renderWaRamp(daily, warmup);
-}
-
 // ── Init ──────────────────────────────────────────────────────────────
 const RAW_URL = 'https://raw.githubusercontent.com/nadavi256/KONIMBEZOLBOT/main/daily_sent.json';
 
@@ -876,8 +695,6 @@ async function init() {
   renderRepeats(repeats);
   drawChart(byDate);
   renderHistory(byDate, dateKey(d30), tKey);
-
-  await initWhatsApp(IS_ARTIFACT);
 }
 
 let _resizeTimer;

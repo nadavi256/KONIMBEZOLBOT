@@ -1,0 +1,859 @@
+<title>Konimbezol Bot — לוח בקרה וואטסאפ</title>
+<style>
+:root {
+  --ground:   #f2f5fb;
+  --surface:  #ffffff;
+  --surface2: #f8faff;
+  --border:   #e2e7f4;
+  --ink-1:    #0f172a;
+  --ink-2:    #475569;
+  --ink-3:    #94a3b8;
+  --accent:   #16a34a;
+  --accent-h: #15803d;
+  --success:  #16a34a;
+  --warning:  #d97706;
+  --danger:   #dc2626;
+  --radius:   10px;
+  --font:     -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono:     'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  --shadow:   0 1px 3px rgba(15,23,42,.07), 0 1px 2px rgba(15,23,42,.04);
+}
+@media (prefers-color-scheme: dark) { :root {
+  --ground: #090d18; --surface: #111827; --surface2: #151e30; --border: #1e293b;
+  --ink-1: #f1f5f9; --ink-2: #94a3b8; --ink-3: #475569;
+  --accent: #22c55e; --accent-h: #4ade80;
+  --shadow: 0 1px 3px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"] {
+  --ground: #090d18; --surface: #111827; --surface2: #151e30; --border: #1e293b;
+  --ink-1: #f1f5f9; --ink-2: #94a3b8; --ink-3: #475569;
+  --accent: #22c55e; --accent-h: #4ade80;
+  --shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+:root[data-theme="light"] {
+  --ground: #f2f5fb; --surface: #ffffff; --surface2: #f8faff; --border: #e2e7f4;
+  --ink-1: #0f172a; --ink-2: #475569; --ink-3: #94a3b8;
+  --accent: #16a34a; --accent-h: #15803d;
+  --shadow: 0 1px 3px rgba(15,23,42,.07);
+}
+
+.cat--gadget  { --cat: #3b82f6; }
+.cat--fashion { --cat: #ec4899; }
+.cat--sport   { --cat: #10b981; }
+.cat--kitchen { --cat: #f59e0b; }
+.cat--car     { --cat: #6366f1; }
+.cat--home    { --cat: #84cc16; }
+.cat--watch   { --cat: #eab308; }
+.cat--tools   { --cat: #f97316; }
+.cat--kids    { --cat: #a855f7; }
+.cat--special { --cat: #14b8a6; }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: var(--font); background: var(--ground); color: var(--ink-1); line-height: 1.5; min-height: 100vh; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font-family: var(--font); cursor: pointer; }
+
+/* Header */
+header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 24px; display: flex; align-items: center;
+  justify-content: space-between; height: 56px;
+  position: sticky; top: 0; z-index: 10;
+}
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.logo {
+  width: 30px; height: 30px; background: var(--accent); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: #fff; font-weight: 700;
+}
+.header-brand h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; }
+.header-brand span { font-size: .8rem; color: var(--ink-3); font-weight: 400; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.status-dot { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--ink-2); }
+.status-dot::before {
+  content: ''; display: block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--success); box-shadow: 0 0 0 2px rgba(22,163,74,.2);
+}
+.status-dot.warn::before { background: var(--warning); box-shadow: 0 0 0 2px rgba(217,119,6,.2); }
+.status-dot.bad::before { background: var(--danger); box-shadow: 0 0 0 2px rgba(220,38,38,.2); }
+.theme-toggle {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 8px; color: var(--ink-2); font-size: .8rem;
+}
+.theme-toggle:hover { background: var(--surface2); }
+
+/* Nav pills */
+.nav-pills { display: flex; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+.nav-pill {
+  font-size: .78rem; font-weight: 600; padding: 5px 12px; border-radius: 6px;
+  color: var(--ink-2); text-decoration: none; transition: background .1s, color .1s;
+}
+.nav-pill:hover { text-decoration: none; background: var(--surface); }
+.nav-pill.active { background: var(--accent); color: #fff; }
+
+/* Layout */
+main { max-width: 1200px; width: 100%; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Health banner */
+.health-banner {
+  display: flex; align-items: center; gap: 14px; padding: 14px 20px;
+  border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.health-banner .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: var(--success); box-shadow: 0 0 0 4px rgba(22,163,74,.15); }
+.health-banner.warn .dot { background: var(--warning); box-shadow: 0 0 0 4px rgba(217,119,6,.15); }
+.health-banner.bad .dot { background: var(--danger); box-shadow: 0 0 0 4px rgba(220,38,38,.15); }
+.health-title { font-size: .88rem; font-weight: 700; }
+.health-sub { font-size: .78rem; color: var(--ink-2); margin-top: 2px; }
+.health-right { margin-right: auto; text-align: left; }
+.health-badge {
+  font-size: .72rem; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+  background: rgba(22,163,74,.1); color: var(--success); white-space: nowrap;
+}
+.health-banner.warn .health-badge { background: rgba(217,119,6,.1); color: var(--warning); }
+.health-banner.bad .health-badge { background: rgba(220,38,38,.1); color: var(--danger); }
+
+/* KPIs */
+.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow);
+}
+.kpi-label {
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ink-3); font-weight: 600; margin-bottom: 8px;
+}
+.kpi-value {
+  font-size: 2rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--ink-1); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.kpi-value.accent { color: var(--accent); }
+.kpi-sub { font-size: .75rem; color: var(--ink-3); margin-top: 4px; }
+.ramp-track { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.ramp-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #4ade80); border-radius: 3px; transition: width .3s; }
+
+/* Panel */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.panel-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+.panel-title { font-size: .85rem; font-weight: 600; }
+.panel-meta { font-size: .75rem; color: var(--ink-3); }
+.panel-body { padding: 4px 0; }
+
+/* Ramp curve (14-day plan) */
+.ramp-panel-body { padding: 16px 18px; }
+.ramp-legend { display: flex; gap: 16px; font-size: .72rem; color: var(--ink-3); margin-top: 10px; }
+.ramp-legend span { display: flex; align-items: center; gap: 5px; }
+.ramp-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+/* Today timeline */
+.timeline-wrap { padding: 18px; }
+.timeline-track { position: relative; height: 44px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
+.timeline-hour { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border); }
+.timeline-hour-label { position: absolute; top: -18px; font-size: .65rem; color: var(--ink-3); transform: translateX(50%); }
+.timeline-dot {
+  position: absolute; top: 50%; transform: translate(50%, -50%); width: 14px; height: 14px;
+  border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); box-shadow: var(--shadow);
+  cursor: default;
+}
+.timeline-dot.gap-violation { background: var(--danger); }
+.timeline-now {
+  position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--ink-3); opacity: .5;
+}
+
+/* Filter toolbar */
+.wa-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 18px;
+}
+.wa-search {
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px;
+  font-size: .8rem; background: var(--surface2); color: var(--ink-1);
+  font-family: var(--font); outline: none; flex: 1; min-width: 160px;
+}
+.wa-search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(22,163,74,.15); }
+.wa-select {
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+  font-size: .8rem; background: var(--surface2); color: var(--ink-1); font-family: var(--font);
+}
+.wa-filter-status { font-size: .74rem; color: var(--accent); font-weight: 500; }
+
+/* WhatsApp deal card grid */
+.wa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; padding: 14px 18px; }
+.wa-card {
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface2);
+  display: flex; flex-direction: column; transition: box-shadow .12s, transform .12s;
+}
+.wa-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.wa-card-img { width: 100%; height: 140px; object-fit: cover; background: var(--surface); display: block; }
+.wa-card-img-empty {
+  width: 100%; height: 140px; background: var(--surface); display: flex; align-items: center;
+  justify-content: center; font-size: 2rem; color: var(--ink-3);
+}
+.wa-card-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.wa-card-name { font-size: .82rem; font-weight: 600; color: var(--ink-1); direction: ltr; text-align: right; line-height: 1.35; }
+.wa-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.cat-badge { font-size: .66rem; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: color-mix(in srgb, var(--cat, var(--accent)) 12%, transparent); color: var(--cat, var(--accent)); white-space: nowrap; }
+.wa-card-time { font-family: var(--mono); font-size: .68rem; color: var(--ink-3); white-space: nowrap; }
+.wa-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.wa-badge { font-size: .68rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+.badge-price { background: rgba(22,163,74,.1); color: var(--success); }
+.badge-rating { background: rgba(217,119,6,.1); color: var(--warning); }
+.badge-source-ai { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.badge-source-template { background: var(--surface); color: var(--ink-3); border: 1px solid var(--border); }
+.badge-groups { background: var(--surface); color: var(--ink-2); border: 1px solid var(--border); }
+.wa-card-footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; }
+.wa-link { font-size: .7rem; color: var(--ink-3); }
+.wa-link:hover { color: var(--accent); }
+
+/* Sidebar */
+.content-grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+.sidebar { display: flex; flex-direction: column; gap: 16px; }
+.chart-wrap { padding: 16px 18px; }
+canvas { display: block; width: 100% !important; }
+.cat-list { padding: 4px 18px 12px; }
+.cat-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.cat-row:last-child { border-bottom: none; }
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cat, var(--accent)); flex-shrink: 0; }
+.cat-name { flex: 1; font-size: .8rem; color: var(--ink-2); }
+.cat-count { font-family: var(--mono); font-size: .78rem; font-weight: 600; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+.cat-bar-track { width: 50px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.cat-bar-fill { height: 100%; background: var(--cat, var(--accent)); border-radius: 2px; }
+
+/* Copy-source split bar */
+.split-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 18px 4px; }
+.split-bar div:first-child { background: var(--accent); }
+.split-bar div:last-child { background: var(--border); }
+.split-legend { display: flex; justify-content: space-between; padding: 0 18px 14px; font-size: .72rem; color: var(--ink-3); }
+
+.empty { padding: 40px 20px; text-align: center; color: var(--ink-3); font-size: .85rem; }
+
+@media (max-width: 800px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .content-grid { grid-template-columns: 1fr; }
+  .sidebar { flex-direction: row; flex-wrap: wrap; }
+  .sidebar .panel { flex: 1; min-width: 240px; }
+}
+@media (max-width: 500px) {
+  main { padding: 14px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .kpi-value { font-size: 1.6rem; }
+  .health-banner { flex-wrap: wrap; }
+  .health-right { margin-right: 0; text-align: right; }
+}
+</style>
+
+<div class="app">
+<header>
+  <div class="header-brand">
+    <div class="logo">K</div>
+    <div><h1>Konimbezol Bot <span>וואטסאפ</span></h1></div>
+  </div>
+  <div class="header-right">
+    <nav class="nav-pills">
+      <a class="nav-pill" href="dashboard.html">🛍 טלגרם</a>
+      <span class="nav-pill active">💬 וואטסאפ</span>
+    </nav>
+    <div class="status-dot" id="status-dot">בוט פעיל</div>
+    <span id="last-updated" style="font-size:.74rem;color:var(--ink-3);"></span>
+    <button class="theme-toggle" id="refresh-btn" onclick="manualRefresh()">↻ רענן</button>
+    <button class="theme-toggle" onclick="toggleTheme()">◐ ערכת נושא</button>
+  </div>
+</header>
+
+<main>
+  <!-- Health banner -->
+  <div class="health-banner" id="health-banner">
+    <div class="dot"></div>
+    <div>
+      <div class="health-title" id="health-title">בודק סטטוס…</div>
+      <div class="health-sub" id="health-sub">—</div>
+    </div>
+    <div class="health-right">
+      <span class="health-badge" id="health-badge">—</span>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">נשלחו היום</div>
+      <div class="kpi-value accent" id="kpi-sent">—</div>
+      <div class="kpi-sub" id="kpi-sent-sub">—</div>
+      <div class="ramp-track"><div class="ramp-fill" id="ramp-fill" style="width:0%"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">יום ברמפ</div>
+      <div class="kpi-value" id="kpi-day">—</div>
+      <div class="kpi-sub" id="kpi-day-sub">מתוך 14 (חימום מספר חדש)</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">מרווח מינימלי</div>
+      <div class="kpi-value" id="kpi-gap">—</div>
+      <div class="kpi-sub">בין שליחה לשליחה, כרגע</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">שליחה אחרונה</div>
+      <div class="kpi-value" id="kpi-last" style="font-size:1.3rem;">—</div>
+      <div class="kpi-sub" id="kpi-last-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">✨ הודעות AI</div>
+      <div class="kpi-value" id="kpi-ai">—</div>
+      <div class="kpi-sub" id="kpi-ai-sub">מתוך ההודעות האחרונות</div>
+    </div>
+  </div>
+
+  <!-- Ramp plan (14 days) -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">📈 תוכנית החימום — 6 ➝ 52 דילים ליום</span>
+      <span class="panel-meta" id="ramp-eta">—</span>
+    </div>
+    <div class="ramp-panel-body">
+      <canvas id="ramp-chart" height="90"></canvas>
+      <div class="ramp-legend">
+        <span><i style="background:var(--accent)"></i> ימים שעברו</span>
+        <span><i style="background:color-mix(in srgb, var(--accent) 30%, var(--border))"></i> היום</span>
+        <span><i style="background:var(--border)"></i> ימים עתידיים</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today timeline -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">🕘 ציר זמן — שליחות היום (09:00–22:00)</span>
+      <span class="panel-meta" id="timeline-meta">—</span>
+    </div>
+    <div class="timeline-wrap">
+      <div class="timeline-track" id="timeline-track"></div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📤 דילים שנשלחו לוואטסאפ</span>
+        <span class="panel-meta" id="wa-feed-count">—</span>
+      </div>
+      <div class="wa-toolbar">
+        <input class="wa-search" id="wa-search" placeholder="🔎 חיפוש לפי שם מוצר…" oninput="renderFiltered()">
+        <select class="wa-select" id="wa-cat-filter" onchange="renderFiltered()"><option value="">כל הקטגוריות</option></select>
+        <select class="wa-select" id="wa-src-filter" onchange="renderFiltered()">
+          <option value="">✨+📋 הכל</option>
+          <option value="ai">✨ AI בלבד</option>
+          <option value="template">📋 תבנית בלבד</option>
+        </select>
+        <select class="wa-select" id="wa-range-filter" onchange="renderFiltered()">
+          <option value="7">7 ימים אחרונים</option>
+          <option value="1">היום בלבד</option>
+          <option value="30">30 יום אחרונים</option>
+        </select>
+        <span class="wa-filter-status" id="wa-filter-status"></span>
+      </div>
+      <div class="wa-grid" id="wa-grid"><div class="empty">טוען…</div></div>
+    </div>
+
+    <div class="sidebar">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">📊 דילים ב-7 ימים</span></div>
+        <div class="chart-wrap"><canvas id="chart" height="120"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">🏷 לפי קטגוריה</span></div>
+        <div class="cat-list" id="cat-list"><div class="empty">—</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">✍️ מקור הטקסט</span></div>
+        <div class="split-bar" id="split-bar"><div style="width:50%"></div><div style="width:50%"></div></div>
+        <div class="split-legend"><span id="split-ai-label">✨ AI —%</span><span id="split-tpl-label">📋 תבנית —%</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const r = document.documentElement;
+  const pref = window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  if (!r.dataset.theme) r.dataset.theme = pref === 'dark' ? 'light' : 'dark';
+  else if (r.dataset.theme === 'dark') r.dataset.theme = 'light';
+  else delete r.dataset.theme;
+  drawChart(window._byDate || {});
+  drawRampChart();
+}
+
+// ── Categories ─────────────────────────────────────────────────────────
+const CATS = {
+  "גאדג'טים":        { emoji:'🔧', cls:'cat--gadget',  color:'#3b82f6' },
+  'אופנה וסטייל':    { emoji:'👗', cls:'cat--fashion', color:'#ec4899' },
+  'ספורט וכושר':     { emoji:'💪', cls:'cat--sport',   color:'#10b981' },
+  'מוצרי מטבח':      { emoji:'🍳', cls:'cat--kitchen', color:'#f59e0b' },
+  'מוצרים לרכב':     { emoji:'🚗', cls:'cat--car',     color:'#6366f1' },
+  'בית וגן':          { emoji:'🏠', cls:'cat--home',    color:'#84cc16' },
+  'שעונים ותכשיטים': { emoji:'⌚', cls:'cat--watch',   color:'#eab308' },
+  'כלי עבודה':        { emoji:'🛠️', cls:'cat--tools',   color:'#f97316' },
+  'מוצרים לילדים':   { emoji:'🎁', cls:'cat--kids',    color:'#a855f7' },
+  'מוצר מומלץ':      { emoji:'⭐', cls:'cat--special', color:'#14b8a6' },
+};
+const catMeta = cat => CATS[cat] || { emoji:'📦', cls:'', color:'#3b82f6' };
+
+// ── Helpers ────────────────────────────────────────────────────────────
+const pad = n => String(n).padStart(2,'0');
+function todayKey() { return new Date().toLocaleDateString('sv-SE', {timeZone: 'Asia/Jerusalem'}); }
+function dateKey(d) { return d.toLocaleDateString('sv-SE', {timeZone: 'Asia/Jerusalem'}); }
+function formatDate(d) {
+  const [y,m,day] = d.split('-');
+  const M = ['','ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  return `${parseInt(day)} ${M[parseInt(m)]} ${y}`;
+}
+function nowIL() {
+  return new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Jerusalem'}));
+}
+
+// ── Ramp math (mirrors whatsapp_warmup.py) ──────────────────────────────
+const ACTIVE_WINDOW_MIN = 13 * 60; // 09:00–22:00
+const START_CAP = 6;
+const TARGET_CAP = 52;
+const RAMP_DAYS = 14;
+
+function computeDailyCap(daysSinceStart) {
+  daysSinceStart = Math.max(0, daysSinceStart);
+  if (daysSinceStart >= RAMP_DAYS) return TARGET_CAP;
+  const progress = daysSinceStart / RAMP_DAYS;
+  return Math.round(START_CAP + (TARGET_CAP - START_CAP) * progress);
+}
+function computeMinGap(cap) { return cap > 0 ? Math.round(ACTIVE_WINDOW_MIN / cap) : null; }
+function daysBetweenKeys(fromKey, toKey) { return Math.round((new Date(toKey) - new Date(fromKey)) / 86400000); }
+
+// ── Mock data (artifact preview only) ───────────────────────────────────
+const MOCK_LOG = [
+  {date:"2026-08-20",time:"12:32",name:"מחסניות אחסון שקופות למגירת מטבח (סט 4)",category:"מוצרי מטבח",link:"https://s.click.aliexpress.com/e/_a1",image:"",price:"מ-13 ₪",rating:"4.7",orders:"2000+",copy_source:"ai",groups_sent:1},
+  {date:"2026-08-20",time:"09:52",name:"תאורת לילה עם חיישן תנועה LED לבית",category:"בית וגן",link:"https://s.click.aliexpress.com/e/_a2",image:"",price:"מ-11 ₪",rating:"4.6",orders:"1500+",copy_source:"ai",groups_sent:1},
+  {date:"2026-08-19",time:"18:10",name:"מטחנת מלח ופלפל חשמלית נטענת USB",category:"מוצרי מטבח",link:"https://s.click.aliexpress.com/e/_a3",image:"",price:"מ-19 ₪",rating:"4.9",orders:"3000+",copy_source:"ai",groups_sent:1},
+  {date:"2026-08-19",time:"11:45",name:"רצועת כושר התנגדות לאימון בית",category:"ספורט וכושר",link:"https://s.click.aliexpress.com/e/_a4",image:"",price:"מ-9 ₪",rating:"4.5",orders:"850+",copy_source:"template",groups_sent:1},
+  {date:"2026-08-18",time:"14:20",name:"מארגן כבלים דביק לשולחן עבודה",category:"גאדג'טים",link:"https://s.click.aliexpress.com/e/_a5",image:"",price:"מ-7 ₪",rating:"4.4",orders:"600+",copy_source:"ai",groups_sent:1},
+];
+const MOCK_DAILY = {date: todayKey(), count: 2, last_sent_at: new Date().toISOString()};
+const MOCK_WARMUP = {start_date: (() => { const d=new Date(); d.setDate(d.getDate()-3); return dateKey(d); })()};
+
+// ── Fetch ─────────────────────────────────────────────────────────────
+async function fetchJson(url, isArtifact, mock, empty) {
+  if (isArtifact) return mock;
+  try {
+    const r = await fetch(url + '?t=' + Date.now(), {cache:'no-store'});
+    if (r.ok) return await r.json();
+  } catch(e) {}
+  return empty;
+}
+
+// ── State ────────────────────────────────────────────────────────────
+let _log = [], _daily = null, _warmup = null, _byDate = {};
+
+// ── Health banner ────────────────────────────────────────────────────
+function renderHealth(daysSince, cap, gapMin, dailyState) {
+  const banner = document.getElementById('health-banner');
+  const dot = document.getElementById('status-dot');
+  const title = document.getElementById('health-title');
+  const sub = document.getElementById('health-sub');
+  const badge = document.getElementById('health-badge');
+  const today = todayKey();
+  const sentToday = (dailyState && dailyState.date === today) ? (dailyState.count || 0) : 0;
+  const lastSentAt = (dailyState && dailyState.date === today) ? dailyState.last_sent_at : null;
+
+  banner.classList.remove('warn', 'bad');
+  dot.classList.remove('warn', 'bad');
+
+  if (lastSentAt) {
+    const minsSince = Math.round((Date.now() - new Date(lastSentAt).getTime()) / 60000);
+    const hour = nowIL().getHours();
+    const inWindow = hour >= 9 && hour < 22;
+    if (inWindow && minsSince > gapMin * 2.5 && sentToday < cap) {
+      banner.classList.add('warn'); dot.classList.add('warn');
+      title.textContent = '⚠️ פער ארוך מהצפוי מהשליחה האחרונה';
+      sub.textContent = `${minsSince} דקות בלי שליחה, בעוד המרווח המתוכנן הוא ${gapMin} דק׳ — ייתכן שה-cron לא רץ`;
+      badge.textContent = 'לבדיקה';
+    } else {
+      title.textContent = '✅ המערכת פעילה כמתוכנן';
+      sub.textContent = `נשלחו ${sentToday} מתוך ${cap} להיום, במרווח מינימלי של ${gapMin} דק׳`;
+      badge.textContent = 'תקין';
+    }
+  } else {
+    title.textContent = 'טרם נשלח דיל היום';
+    sub.textContent = nowIL().getHours() < 9 ? 'החלון היומי (09:00–22:00) עוד לא נפתח' : `מכסה יומית: ${cap} דילים, במרווח מינימלי ${gapMin} דק׳`;
+    badge.textContent = 'ממתין';
+  }
+}
+
+// ── KPIs + ramp ──────────────────────────────────────────────────────
+function renderKpis(daysSince, cap, gapMin, dailyState, warmupState, recentLog) {
+  const today = todayKey();
+  const sentToday = (dailyState && dailyState.date === today) ? (dailyState.count || 0) : 0;
+  const lastSentAt = (dailyState && dailyState.date === today) ? dailyState.last_sent_at : null;
+
+  document.getElementById('kpi-sent').textContent = `${sentToday} / ${cap}`;
+  document.getElementById('kpi-sent-sub').textContent = sentToday >= cap ? 'המכסה היומית מוצתה' : `עוד ${cap-sentToday} דילים היום`;
+  document.getElementById('ramp-fill').style.width = Math.min(100, Math.round(sentToday/cap*100)) + '%';
+  document.getElementById('kpi-day').textContent = Math.max(0, daysSince) + 1;
+  document.getElementById('kpi-day-sub').textContent = daysSince >= RAMP_DAYS ? 'קצב מלא הושג 🎉' : `מתוך ${RAMP_DAYS} (חימום מספר חדש)`;
+  document.getElementById('kpi-gap').textContent = gapMin ? `${gapMin} דק'` : '—';
+
+  if (lastSentAt) {
+    const d = new Date(lastSentAt);
+    document.getElementById('kpi-last').textContent = d.toLocaleTimeString('he-IL', {timeZone:'Asia/Jerusalem', hour:'2-digit', minute:'2-digit'});
+    document.getElementById('kpi-last-sub').textContent = 'שעון ישראל';
+  } else {
+    document.getElementById('kpi-last').textContent = '—';
+    document.getElementById('kpi-last-sub').textContent = 'עדיין לא נשלח היום';
+  }
+
+  const aiCount = recentLog.filter(i => i.copy_source === 'ai').length;
+  const pct = recentLog.length ? Math.round(aiCount / recentLog.length * 100) : 0;
+  document.getElementById('kpi-ai').textContent = recentLog.length ? `${pct}%` : '—';
+  document.getElementById('kpi-ai-sub').textContent = `${aiCount} מתוך ${recentLog.length} הודעות`;
+
+  document.getElementById('ramp-eta').textContent = daysSince >= RAMP_DAYS
+    ? 'קצב היעד (52/יום) פעיל'
+    : `יעד מלא בעוד ${RAMP_DAYS - daysSince} ימים`;
+}
+
+// ── Ramp chart (14-day plan) ─────────────────────────────────────────
+function drawRampChart() {
+  const canvas = document.getElementById('ramp-chart');
+  if (!canvas || !_warmup) return;
+  const daysSince = daysBetweenKeys(_warmup.start_date || todayKey(), todayKey());
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth;
+  const H = 90;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const isDark = document.documentElement.dataset.theme==='dark' ||
+    (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const accent = isDark ? '#22c55e' : '#16a34a';
+  const todayColor = isDark ? 'rgba(34,197,94,.45)' : 'rgba(22,163,74,.35)';
+  const future = isDark ? '#1e293b' : '#e2e7f4';
+  const tx = isDark ? '#64748b' : '#94a3b8';
+
+  const pd = { l:4, r:4, t:14, b:20 };
+  const n = RAMP_DAYS;
+  const barW = Math.floor((W - pd.l - pd.r) / n) - 4;
+  const maxCap = TARGET_CAP;
+
+  for (let i = 0; i < n; i++) {
+    const cap = computeDailyCap(i);
+    const x = pd.l + i * ((W-pd.l-pd.r)/n) + ((W-pd.l-pd.r)/n-barW)/2;
+    const barH = Math.max(3, (cap/maxCap) * (H-pd.t-pd.b));
+    const y = H - pd.b - barH;
+    if (i < daysSince) ctx.fillStyle = accent;
+    else if (i === daysSince) ctx.fillStyle = todayColor;
+    else ctx.fillStyle = future;
+    ctx.beginPath(); ctx.roundRect(x,y,barW,barH,2); ctx.fill();
+    if (i === daysSince || i === n-1 || i === 0) {
+      ctx.fillStyle = tx; ctx.font = '600 9px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(cap, x+barW/2, y-3);
+    }
+  }
+  ctx.fillStyle = tx; ctx.font = '9px -apple-system,sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('יום 1', W - pd.r, H-6);
+  ctx.textAlign = 'left';
+  ctx.fillText(`יום ${n} (52/יום)`, pd.l, H-6);
+}
+
+// ── Today timeline ───────────────────────────────────────────────────
+function renderTimeline(todayItems, gapMin) {
+  const track = document.getElementById('timeline-track');
+  const meta = document.getElementById('timeline-meta');
+  track.innerHTML = '';
+  const startH = 9, endH = 22;
+  for (let h = startH; h <= endH; h++) {
+    const pct = (h - startH) / (endH - startH) * 100;
+    const line = document.createElement('div');
+    line.className = 'timeline-hour'; line.style.right = pct + '%';
+    track.appendChild(line);
+    const label = document.createElement('div');
+    label.className = 'timeline-hour-label'; label.style.right = pct + '%';
+    label.textContent = h + ':00';
+    track.appendChild(label);
+  }
+  const sorted = [...todayItems].sort((a,b) => a.time.localeCompare(b.time));
+  let violations = 0;
+  sorted.forEach((item, idx) => {
+    const [h, m] = item.time.split(':').map(Number);
+    const minsOfDay = h * 60 + m;
+    const pct = Math.min(100, Math.max(0, (minsOfDay - startH*60) / ((endH-startH)*60) * 100));
+    const dot = document.createElement('div');
+    let isViolation = false;
+    if (idx > 0) {
+      const [ph, pm] = sorted[idx-1].time.split(':').map(Number);
+      const gap = minsOfDay - (ph*60+pm);
+      if (gap < gapMin * 0.6) { isViolation = true; violations++; }
+    }
+    dot.className = 'timeline-dot' + (isViolation ? ' gap-violation' : '');
+    dot.style.right = pct + '%';
+    dot.title = `${item.time} — ${item.name}`;
+    track.appendChild(dot);
+  });
+  const nowH = nowIL().getHours(), nowM = nowIL().getMinutes();
+  if (nowH >= startH && nowH < endH) {
+    const pct = ((nowH-startH)*60+nowM) / ((endH-startH)*60) * 100;
+    const nowLine = document.createElement('div');
+    nowLine.className = 'timeline-now'; nowLine.style.right = pct + '%';
+    track.appendChild(nowLine);
+  }
+  meta.textContent = sorted.length
+    ? `${sorted.length} שליחות${violations ? ` · ⚠️ ${violations} מרווחים קצרים מהצפוי` : ''}`
+    : 'אין שליחות היום עדיין';
+}
+
+// ── 7-day chart ──────────────────────────────────────────────────────
+function drawChart(byDate) {
+  const canvas = document.getElementById('chart');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 36;
+  const H = 120;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const days = Array.from({length:7},(_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-(6-i));
+    const key = dateKey(d);
+    const label = i===6 ? 'היום' : pad(d.getDate())+'/'+pad(d.getMonth()+1);
+    return { key, label, count: (byDate[key]||[]).length };
+  });
+  const max = Math.max(...days.map(d=>d.count), 1);
+  const pd = { l:4, r:4, t:10, b:24 };
+  const barW = Math.floor((W - pd.l - pd.r) / 7) - 4;
+  const isDark = document.documentElement.dataset.theme==='dark' ||
+    (!document.documentElement.dataset.theme && window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const ac = isDark ? '#22c55e' : '#16a34a';
+  const mu = isDark ? '#1e293b' : '#e2e7f4';
+  const tx = isDark ? '#64748b' : '#94a3b8';
+  const af = isDark ? 'rgba(34,197,94,.18)' : 'rgba(22,163,74,.1)';
+
+  days.forEach((d, i) => {
+    const x = pd.l + i * ((W-pd.l-pd.r)/7) + ((W-pd.l-pd.r)/7-barW)/2;
+    const barH = d.count>0 ? Math.max(4,(d.count/max)*(H-pd.t-pd.b)) : 0;
+    const y = H - pd.b - barH;
+    const today = i===6;
+    if (today && d.count>0) {
+      const g = ctx.createLinearGradient(x,y,x,H-pd.b);
+      g.addColorStop(0, ac); g.addColorStop(1, ac+'88');
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = d.count>0 ? af : mu;
+    }
+    ctx.beginPath(); ctx.roundRect(x,y,barW,barH,3); ctx.fill();
+    if (d.count>0) {
+      ctx.fillStyle = today ? ac : tx;
+      ctx.font = `600 ${today?'11':'10'}px -apple-system,sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(d.count, x+barW/2, y-3);
+    }
+    ctx.fillStyle = today ? ac : tx;
+    ctx.font = `${today?'600':'400'} 10px -apple-system,sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(d.label, x+barW/2, H-6);
+  });
+}
+
+// ── Categories + copy-source split ──────────────────────────────────
+function renderCats(items) {
+  const el = document.getElementById('cat-list');
+  if (!items || !items.length) { el.innerHTML = '<div class="empty">—</div>'; return; }
+  const counts = {};
+  items.forEach(i => { counts[i.category] = (counts[i.category]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max = sorted[0][1];
+  el.innerHTML = sorted.map(([cat, n]) => {
+    const m = catMeta(cat);
+    return `<div class="cat-row ${m.cls}">
+      <div class="cat-dot"></div>
+      <div class="cat-name">${m.emoji} ${cat}</div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
+      <div class="cat-count">${n}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderSplit(items) {
+  const ai = items.filter(i => i.copy_source === 'ai').length;
+  const total = items.length || 1;
+  const aiPct = Math.round(ai/total*100);
+  const bar = document.getElementById('split-bar');
+  bar.children[0].style.width = aiPct + '%';
+  bar.children[1].style.width = (100-aiPct) + '%';
+  document.getElementById('split-ai-label').textContent = `✨ AI ${aiPct}%`;
+  document.getElementById('split-tpl-label').textContent = `📋 תבנית ${100-aiPct}%`;
+}
+
+// ── Deal grid + filters ("control & understanding") ────────────────
+function populateCatFilter(items) {
+  const sel = document.getElementById('wa-cat-filter');
+  const current = sel.value;
+  const cats = [...new Set(items.map(i=>i.category))].filter(Boolean).sort();
+  sel.innerHTML = '<option value="">כל הקטגוריות</option>' + cats.map(c => {
+    const m = catMeta(c);
+    return `<option value="${c}">${m.emoji} ${c}</option>`;
+  }).join('');
+  sel.value = current;
+}
+
+function waCopySourceBadge(src) {
+  return src === 'ai'
+    ? '<span class="wa-badge badge-source-ai">✨ AI</span>'
+    : '<span class="wa-badge badge-source-template">📋 תבנית</span>';
+}
+
+function renderGrid(items) {
+  const el = document.getElementById('wa-grid');
+  const countEl = document.getElementById('wa-feed-count');
+  if (!items || !items.length) {
+    el.innerHTML = '<div class="empty">אין דילים תואמים</div>';
+    countEl.textContent = '';
+    return;
+  }
+  const sorted = [...items].sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
+  countEl.textContent = `${sorted.length} דילים`;
+  el.innerHTML = sorted.map(item => {
+    const m = catMeta(item.category);
+    const img = item.image
+      ? `<img class="wa-card-img" src="${item.image}" loading="lazy" alt="">`
+      : `<div class="wa-card-img-empty">📦</div>`;
+    const badges = [];
+    if (item.price) badges.push(`<span class="wa-badge badge-price">💰 ${item.price}</span>`);
+    if (item.rating) badges.push(`<span class="wa-badge badge-rating">⭐ ${item.rating}</span>`);
+    badges.push(waCopySourceBadge(item.copy_source));
+    if (item.groups_sent) badges.push(`<span class="wa-badge badge-groups">📨 ${item.groups_sent}</span>`);
+    return `<div class="wa-card">
+      ${img}
+      <div class="wa-card-body">
+        <div class="wa-card-top">
+          <span class="cat-badge ${m.cls}">${m.emoji} ${item.category||''}</span>
+          <span class="wa-card-time">${formatDate(item.date)} ${item.time||''}</span>
+        </div>
+        <div class="wa-card-name">${item.name}</div>
+        <div class="wa-badges">${badges.join('')}</div>
+        <div class="wa-card-footer">
+          ${item.link ? `<a class="wa-link" href="${item.link}" target="_blank" rel="noopener">↗ AliExpress</a>` : '<span></span>'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFiltered() {
+  const q = document.getElementById('wa-search').value.trim().toLowerCase();
+  const cat = document.getElementById('wa-cat-filter').value;
+  const src = document.getElementById('wa-src-filter').value;
+  const range = parseInt(document.getElementById('wa-range-filter').value, 10);
+  const cutoff = (() => { const d = new Date(); d.setDate(d.getDate()-(range-1)); return dateKey(d); })();
+
+  let filtered = _log.filter(i => i.date >= cutoff);
+  if (q) filtered = filtered.filter(i => (i.name||'').toLowerCase().includes(q));
+  if (cat) filtered = filtered.filter(i => i.category === cat);
+  if (src) filtered = filtered.filter(i => i.copy_source === src);
+
+  const status = document.getElementById('wa-filter-status');
+  const activeFilters = [q && 'חיפוש', cat, src && (src==='ai'?'AI':'תבנית')].filter(Boolean);
+  status.textContent = activeFilters.length ? `מסונן: ${activeFilters.join(', ')}` : '';
+
+  renderGrid(filtered);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+async function init() {
+  const IS_ARTIFACT = window.location.href.includes('claude.ai') || window.location.protocol === 'null:';
+  const base = 'https://raw.githubusercontent.com/nadavi256/KONIMBEZOLBOT/main/';
+  const [log, daily, warmup] = await Promise.all([
+    fetchJson(base + 'whatsapp_daily_log.json', IS_ARTIFACT, MOCK_LOG, []),
+    fetchJson(base + 'whatsapp_daily.json', IS_ARTIFACT, MOCK_DAILY, null),
+    fetchJson(base + 'whatsapp_warmup.json', IS_ARTIFACT, MOCK_WARMUP, null),
+  ]);
+  _log = Array.isArray(log) ? log : [];
+  _daily = daily;
+  _warmup = warmup;
+
+  const today = todayKey();
+  const startDate = (warmup && warmup.start_date) || today;
+  const daysSince = daysBetweenKeys(startDate, today);
+  const cap = computeDailyCap(daysSince);
+  const gapMin = computeMinGap(cap);
+
+  const byDate = {};
+  _log.forEach(item => { (byDate[item.date] = byDate[item.date] || []).push(item); });
+  _byDate = byDate;
+  window._byDate = byDate;
+
+  const cutoff7 = (() => { const d = new Date(); d.setDate(d.getDate()-6); return dateKey(d); })();
+  const recent = _log.filter(i => i.date >= cutoff7);
+  const todayItems = byDate[today] || [];
+
+  renderHealth(daysSince, cap, gapMin, daily);
+  renderKpis(daysSince, cap, gapMin, daily, warmup, recent);
+  drawRampChart();
+  renderTimeline(todayItems, gapMin);
+  drawChart(byDate);
+  renderCats(recent);
+  renderSplit(recent);
+  populateCatFilter(_log);
+  renderFiltered();
+}
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => { drawChart(window._byDate||{}); drawRampChart(); }, 180);
+});
+
+// ── Auto-refresh ──────────────────────────────────────────────────────
+const REFRESH_INTERVAL = 5 * 60 * 1000;
+
+function updateLastUpdated() {
+  const el = document.getElementById('last-updated');
+  if (!el) return;
+  const now = new Date();
+  const ilDate = now.toLocaleDateString('he-IL', {timeZone:'Asia/Jerusalem', day:'2-digit', month:'2-digit', year:'2-digit'});
+  const ilTime = now.toLocaleTimeString('he-IL', {timeZone:'Asia/Jerusalem', hour:'2-digit', minute:'2-digit'});
+  el.textContent = `עודכן: ${ilDate} ${ilTime}`;
+}
+
+function setRefreshCountdown() {
+  let remaining = REFRESH_INTERVAL / 1000;
+  const btn = document.getElementById('refresh-btn');
+  clearInterval(window._countdownTimer);
+  window._countdownTimer = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) { remaining = REFRESH_INTERVAL / 1000; }
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    if (btn) btn.title = `רענון אוטומטי בעוד ${mins}:${pad(secs)}`;
+  }, 1000);
+}
+
+async function manualRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn) { btn.textContent = '⟳ טוען…'; btn.disabled = true; }
+  await init();
+  updateLastUpdated();
+  if (btn) { btn.textContent = '↻ רענן'; btn.disabled = false; }
+  setRefreshCountdown();
+}
+
+setInterval(() => init().then(updateLastUpdated), REFRESH_INTERVAL);
+
+init().then(updateLastUpdated);
+setRefreshCountdown();
+</script>
