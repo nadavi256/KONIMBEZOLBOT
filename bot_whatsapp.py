@@ -97,10 +97,15 @@ async def send_whatsapp_products():
         return
 
     product = valid[0]
+    logger.info(
+        f"Product data: price={product.get('price')} rating={product.get('rating')} "
+        f"orders={product.get('orders')} image={'yes' if product.get('image_url') else 'no'}"
+    )
 
     def build_message() -> tuple[str, str | None]:
-        text = generate_whatsapp_copy(product) or build_whatsapp_message(product)
-        return text, product.get("image_url")
+        ai_text = generate_whatsapp_copy(product)
+        logger.info(f"Copy source: {'AI copywriter' if ai_text else 'template fallback'}")
+        return ai_text or build_whatsapp_message(product), product.get("image_url")
 
     ok = send_to_all_groups(build_message)
     logger.info(f"Sent to {ok}/{len(GROUP_IDS)} WhatsApp groups: {product['name'][:55]}")

@@ -78,11 +78,10 @@ def send_to_all_groups(build_message: Callable[[], tuple[str, str | None]]) -> i
     success = 0
     for i, gid in enumerate(groups):
         text, image_url = build_message()
-        ok = send_image_to_group(gid, image_url, text) if image_url else False
-        if not ok:
-            ok = send_to_group(gid, text)
+        sent_as_image = bool(image_url) and send_image_to_group(gid, image_url, text)
+        ok = sent_as_image or send_to_group(gid, text)
         if ok:
-            logger.info(f"✅ WhatsApp sent to {gid}")
+            logger.info(f"✅ WhatsApp sent to {gid} ({'image+caption' if sent_as_image else 'text only'})")
             success += 1
         else:
             logger.warning(f"❌ WhatsApp failed for {gid}")
