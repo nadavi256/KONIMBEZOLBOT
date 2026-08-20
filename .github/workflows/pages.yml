@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'dashboard.html'
+      - 'dashboard-whatsapp.html'
   workflow_dispatch:
 
 permissions:
@@ -27,8 +28,8 @@ jobs:
           git fetch origin gh-pages || true
           git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
           git rm -rf . --quiet 2>/dev/null || true
-          git checkout main -- dashboard.html
+          git checkout main -- dashboard.html dashboard-whatsapp.html
           touch .nojekyll
-          git add dashboard.html .nojekyll
+          git add dashboard.html dashboard-whatsapp.html .nojekyll
           git commit -m "chore: update dashboard" || echo "Nothing to commit"
           git push origin gh-pages
