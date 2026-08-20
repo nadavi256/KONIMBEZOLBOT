@@ -15,6 +15,7 @@ from whatsapp_tracker import load_wa_sent, save_wa_sent, get_daily_state, record
 from whatsapp_warmup import compute_daily_cap, compute_min_gap_minutes
 from known_tracker import load_seen_ever
 from copywriter import generate_whatsapp_copy
+from whatsapp_daily_log import log_product as log_whatsapp_product
 
 load_dotenv()
 
@@ -102,8 +103,11 @@ async def send_whatsapp_products():
         f"orders={product.get('orders')} image={'yes' if product.get('image_url') else 'no'}"
     )
 
+    copy_source_used = {"value": "template"}
+
     def build_message() -> tuple[str, str | None]:
         ai_text = generate_whatsapp_copy(product)
+        copy_source_used["value"] = "ai" if ai_text else "template"
         logger.info(f"Copy source: {'AI copywriter' if ai_text else 'template fallback'}")
         return ai_text or build_whatsapp_message(product), product.get("image_url")
 
@@ -113,6 +117,7 @@ async def send_whatsapp_products():
     if ok > 0:
         save_wa_sent(sent_ordered + [product["source_url"]])
         record_daily_send()
+        log_whatsapp_product(product, copy_source_used["value"], ok)
 
     logger.info("=== WhatsApp send complete ===")
 
