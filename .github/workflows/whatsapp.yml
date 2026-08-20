@@ -9,7 +9,11 @@ on:
     # ramp that starts low for a brand-new number and rises to the full
     # target over ~2 weeks (see whatsapp_warmup.py) — most triggers during
     # the ramp period are expected no-ops by design, not failures.
-    - cron: '0,15,30,45 6-18 * * *'
+    #
+    # Minutes are offset (not :00/:15/:30/:45) on purpose: GitHub's own
+    # docs warn schedule triggers queue behind everyone else's jobs hardest
+    # at those exact marks, since every repo on GitHub defaults to them.
+    - cron: '7,22,37,52 6-18 * * *'
 
 concurrency:
   group: whatsapp-send
