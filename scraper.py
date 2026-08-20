@@ -133,6 +133,30 @@ def _resolve_affiliate_url(url: str) -> str | None:
     return None
 
 
+_FX_FALLBACK_RATES = {"USD": 3.7, "EUR": 4.0, "GBP": 4.6}
+_fx_cache: dict[str, float] = {}
+
+
+def _usd_eur_gbp_to_ils(amount: float, currency: str) -> str:
+    """Convert a scraped price to ILS, phrased as "starting from" — AliExpress
+    shows first-time-visitor promotional pricing to our anonymous scraping
+    session, which often isn't what a buyer with an existing account actually
+    pays, so we don't state it as a guaranteed number."""
+    if currency == "ILS":
+        return f"מ-{amount:.0f} ₪"
+    rate = _fx_cache.get(currency)
+    if rate is None:
+        rate = _FX_FALLBACK_RATES.get(currency, _FX_FALLBACK_RATES["USD"])
+        try:
+            r = requests.get(f"https://api.frankfurter.app/latest?from={currency}&to=ILS", timeout=5)
+            r.raise_for_status()
+            rate = r.json()["rates"]["ILS"]
+        except Exception as e:
+            logger.debug(f"FX rate fetch failed for {currency}, using fallback {rate}: {e}")
+        _fx_cache[currency] = rate
+    return f"מ-{amount * rate:.0f} ₪"
+
+
 async def _get_aliexpress_stats(ali_url: str, page) -> dict:
     """Scrape price, purchase count and rating from an AliExpress product page.
 
@@ -176,12 +200,20 @@ async def _get_aliexpress_stats(ali_url: str, page) -> dict:
         # Price: currency symbol + amount, near the top of the page (the
         # buy panel) — searching only the first slice avoids picking up
         # unrelated prices from "you may also like" sections further down.
+        # Always converted to ILS — see _usd_eur_gbp_to_ils for why it's
+        # phrased as "starting from" rather than a fixed number.
         price_match = re.search(
-            r"(?:US\s?\$|[\$₪€£])\s?(\d+(?:[.,]\d{1,2})?)",
+            r"(US\s?\$|[\$₪€£])\s?(\d+(?:[.,]\d{1,2})?)",
             body[:3000]
         )
         if price_match:
-            stats["price"] = price_match.group(0).strip()
+            symbol = price_match.group(1).strip()
+            amount = float(price_match.group(2).replace(",", "."))
+            if symbol.startswith("US") or symbol == "$":
+                currency = "USD"
+            else:
+                currency = {"€": "EUR", "£": "GBP", "₪": "ILS"}.get(symbol, "USD")
+            stats["price"] = _usd_eur_gbp_to_ils(amount, currency)
 
     except Exception as e:
         logger.debug(f"AliExpress stats fetch failed: {e}")
