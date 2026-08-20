@@ -797,22 +797,24 @@ function renderWaRamp(dailyState, warmupState) {
   }
 }
 
-async function fetchJson(url, isArtifact, mock) {
-  if (!isArtifact) {
-    try {
-      const r = await fetch(url + '?t=' + Date.now(), {cache:'no-store'});
-      if (r.ok) return await r.json();
-    } catch(e) {}
-  }
-  return mock;
+async function fetchJson(url, isArtifact, mock, empty) {
+  // Mock data is only ever shown in an artifact preview (CSP blocks the
+  // real fetch there). On the real deployed page, a failed/missing fetch
+  // means "genuinely no data yet" and must render as empty, not fake data.
+  if (isArtifact) return mock;
+  try {
+    const r = await fetch(url + '?t=' + Date.now(), {cache:'no-store'});
+    if (r.ok) return await r.json();
+  } catch(e) {}
+  return empty;
 }
 
 async function initWhatsApp(isArtifact) {
   const base = 'https://raw.githubusercontent.com/nadavi256/KONIMBEZOLBOT/main/';
   const [log, daily, warmup] = await Promise.all([
-    fetchJson(base + 'whatsapp_daily_log.json', isArtifact, WA_MOCK_LOG),
-    fetchJson(base + 'whatsapp_daily.json', isArtifact, WA_MOCK_DAILY),
-    fetchJson(base + 'whatsapp_warmup.json', isArtifact, WA_MOCK_WARMUP),
+    fetchJson(base + 'whatsapp_daily_log.json', isArtifact, WA_MOCK_LOG, []),
+    fetchJson(base + 'whatsapp_daily.json', isArtifact, WA_MOCK_DAILY, null),
+    fetchJson(base + 'whatsapp_warmup.json', isArtifact, WA_MOCK_WARMUP, null),
   ]);
   const cutoff = (() => { const d = new Date(); d.setDate(d.getDate()-6); return dateKey(d); })();
   const recent = (Array.isArray(log) ? log : []).filter(i => i.date >= cutoff);
