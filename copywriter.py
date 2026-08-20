@@ -30,8 +30,7 @@ SYSTEM_PROMPT = """\
    ליצירתיות בניסוח; כל שאר המבנה קבוע.
 3. 2-4 שורות תכונות, כל שורה מתחילה באימוג'י ✅ ומשפט קצר אחד (לא משפט \
    מורכב, לא כמה תכונות באותה שורה).
-4. אם יש דירוג ו/או מספר הזמנות בפרטי המוצר — שורה אחת: "⭐ דירוג X | \
-   מעל Y הזמנות" (רק את מה שיש בפועל).
+4. אם יש דירוג בפרטי המוצר — שורה אחת: "⭐ דירוג X".
 5. אם יש מחיר בפרטי המוצר — שורה אחת: "💰 מחיר: <המחיר בדיוק כפי שסופק>" \
    (אל תשני את הניסוח של המחיר עצמו, כולל אם כתוב "מ-").
 6. שורה אחרונה, נפרדת: הקישור המדויק שסופק, בלי לשנות בו אף תו.
@@ -74,8 +73,11 @@ def generate_whatsapp_copy(product: dict) -> str | None:
         details.append("תכונות בולטות: " + "; ".join(product["features"][:5]))
     if product.get("rating"):
         details.append(f"דירוג: {product['rating']}")
-    if product.get("orders"):
-        details.append(f"מספר הזמנות: {product['orders']}")
+    # Deliberately not passing "orders" here: it's extracted with a regex
+    # from the AliExpress page and has shown false positives (picking up
+    # an unrelated "recent activity" number instead of the real lifetime
+    # sold count) — still scraped and logged for the dashboard so accuracy
+    # can be verified over real sends, just not stated to customers yet.
     if product.get("category"):
         details.append(f"קטגוריה: {product['category']}")
 

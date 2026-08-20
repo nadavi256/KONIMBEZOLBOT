@@ -271,7 +271,8 @@ def build_whatsapp_message(product: dict) -> str:
     name     = product.get("name", "מוצר מיוחד")
     link     = product["aliexpress_link"]
     features = product.get("features", [])
-    orders   = product.get("orders")
+    # "orders" deliberately not surfaced here — see copywriter.py's comment
+    # on why (regex false positives, still logged for the dashboard).
     rating   = product.get("rating")
     price    = product.get("price")
 
@@ -285,14 +286,7 @@ def build_whatsapp_message(product: dict) -> str:
                 bullets.append(f"✅ {f}")
         feature_lines = "\n".join(bullets)
 
-    if orders and rating:
-        stats_line = f"🏅 {orders} רכישות | דירוג {rating} ⭐"
-    elif orders:
-        stats_line = f"🏅 {orders} רכישות"
-    elif rating:
-        stats_line = f"🏅 דירוג {rating} ⭐"
-    else:
-        stats_line = None
+    stats_line = f"🏅 דירוג {rating} ⭐" if rating else None
 
     lines = [hook, "", f"{cat_emoji} *{name}*", ""]
     if price:

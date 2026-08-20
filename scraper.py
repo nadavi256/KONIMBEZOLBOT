@@ -172,19 +172,26 @@ async def _get_aliexpress_stats(ali_url: str, page) -> dict:
         await page.wait_for_timeout(4000)
         body = await page.inner_text("body")
 
-        # Orders: "1000+ sold", "2.3K+ sold", "10K+ sold", "500 orders"
+        # Orders: require a "+" or "K+" suffix ("1,000+ sold", "2.3K+ sold")
+        # — that's specifically how AliExpress phrases its real lifetime
+        # sold-count badge. A bare number before "sold"/"orders" is too easy
+        # to false-positive on an unrelated widget (recent-activity ticker,
+        # review count, etc.) elsewhere on the page — better to report
+        # nothing than a wrong count. Also confined to the same top slice
+        # as price, to stay near the buy-box instead of scanning the whole
+        # page (reviews, recommendations) where those false positives live.
         orders_match = re.search(
-            r"([\d,]+(?:\.\d+)?[Kk]?\+?)\s*(?:sold|orders|הזמנות|נמכרו)",
-            body, re.IGNORECASE
+            r"([\d,]+(?:\.\d+)?[Kk]\+|[\d,]+\+)\s*(?:sold|orders|הזמנות|נמכרו)",
+            body[:3000], re.IGNORECASE
         )
         if orders_match:
-            raw = orders_match.group(1).replace(",", "").strip()
+            raw = orders_match.group(1).replace(",", "").replace("+", "").strip()
             # Normalize: 2.3K -> 2300, 10K -> 10000
             if raw.lower().endswith("k"):
                 num = float(raw[:-1]) * 1000
-                stats["orders"] = f"{int(num):,}"
+                stats["orders"] = f"{int(num):,}+"
             else:
-                stats["orders"] = raw
+                stats["orders"] = f"{int(raw):,}+"
 
         # Rating: look for X.X pattern near "rating" or standalone 4.x/5.0
         rating_match = re.search(
