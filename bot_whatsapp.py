@@ -29,6 +29,15 @@ logger = logging.getLogger(__name__)
 IL_TZ = pytz.timezone("Asia/Jerusalem")
 PRODUCTS_PER_RUN = 1
 
+# Manual kill switch: when this file exists in the repo, every trigger is a
+# no-op regardless of the ramp/gap math below. Needed because the trigger
+# itself (cron-job.org, GitHub's schedule) fires on its own timer and can't
+# be paused from here — this is the one guarantee that holds even if a
+# trigger fires while we've deliberately decided not to send (e.g. WhatsApp
+# flagged the account and any further sends right now would make it worse).
+# Delete the file (or the line inside it) to resume.
+PAUSE_FLAG_FILE = "whatsapp_paused.flag"
+
 # Startup jitter: don't fire at the exact same second the workflow trigger
 # fired every time — a perfectly regular cadence is itself a bot signature.
 STARTUP_JITTER_MAX_SECONDS = 90
@@ -39,6 +48,13 @@ GAP_TOLERANCE_MINUTES = 2
 
 
 async def send_whatsapp_products():
+    if os.path.exists(PAUSE_FLAG_FILE):
+        logger.warning(
+            f"Paused — {PAUSE_FLAG_FILE} is present, skipping this trigger entirely. "
+            "Delete the file to resume sending."
+        )
+        return
+
     il_time = datetime.now(IL_TZ)
     if not (9 <= il_time.hour <= 21):
         logger.info(f"Outside active hours ({il_time.strftime('%H:%M')} IL) — skipping")

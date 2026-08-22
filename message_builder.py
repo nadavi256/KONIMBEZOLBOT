@@ -259,6 +259,19 @@ def build_message(product: dict, index: int = 1, total: int = 1) -> str:
     return "\n".join(lines)
 
 
+# Short, neutral lead-ins for the link line — including no lead-in at all —
+# so the same domain doesn't appear framed identically in every message.
+# Deliberately plain, not urgency-flavored ("קנו עכשיו!!!"): the goal is to
+# break up repetition, not add more spam-flavored phrasing.
+LINK_LEAD_INS = [
+    "", "", "",
+    "🔗 לינק:",
+    "🛒 למוצר:",
+    "👇 קישור לרכישה:",
+    "לצפייה והזמנה:",
+]
+
+
 def build_whatsapp_message(product: dict) -> str:
     """Plain-text version of the deal message for WhatsApp (no HTML)."""
     category  = product.get("category", "")
@@ -298,7 +311,13 @@ def build_whatsapp_message(product: dict) -> str:
     if stats_line:
         lines += [stats_line, ""]
 
-    lines.append(link)
+    # A bare link, worded identically in every message, is one of the
+    # clearest repeated-pattern signals WhatsApp's spam detection looks for
+    # (same domain, same framing, over and over). Varying the short lead-in
+    # — including sometimes having none — keeps the link itself untouched
+    # while breaking that visual repetition.
+    lead_in = random.choice(LINK_LEAD_INS)
+    lines.append(f"{lead_in}\n{link}" if lead_in else link)
     return "\n".join(lines)
 
 
