@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  font-family: "Heebo", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900 antialiased;
+}

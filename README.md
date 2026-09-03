@@ -1,3 +1,5 @@
+> **הערה:** הריפו מכיל עכשיו גם את אתר אירועי הלילה (Next.js + Supabase) — ראו [NIGHTLIFE.md](./NIGHTLIFE.md) ו-[CLAUDE.md](./CLAUDE.md). ההוראות למטה מתייחסות לבוט הטלגרם הישן.
+
 # KONIMBEZOL Telegram Bot
 
 בוט טלגרם אוטומטי שמפרסם מוצרים מאתר konimbezol.co.il לערוץ טלגרם עם הפניות ישירות לאלי אקספרס.
