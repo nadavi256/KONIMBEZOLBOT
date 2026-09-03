@@ -5,7 +5,8 @@ export function priceLabel(e: Pick<EventFull, "is_free" | "price_min" | "price_m
   if (e.is_free) return "כניסה חופשית";
   const min = e.price_min != null ? Math.round(Number(e.price_min)) : null;
   const max = e.price_max != null ? Math.round(Number(e.price_max)) : null;
-  if (min != null && max != null && min !== max) return `${min}–${max} ₪`;
+  // U+2066/U+2069 isolate the range so RTL text doesn't flip it to "80–60"
+  if (min != null && max != null && min !== max) return `⁦${min}–${max}⁩ ₪`;
   if (min != null) return `${min} ₪`;
   if (max != null) return `${max} ₪`;
   return null;

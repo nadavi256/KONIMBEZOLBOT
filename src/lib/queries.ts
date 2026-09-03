@@ -1,3 +1,4 @@
+import { DEMO_CITIES, DEMO_GENRES, DEMO_ORGANIZERS, DEMO_VENUES, demoEnabled, demoEvents } from "./demo";
 import { supabasePublic } from "./supabase/public";
 import type { City, EventFull, Genre, Organizer, Venue } from "./types";
 
@@ -21,6 +22,7 @@ function shapeEvent(row: any): EventFull {
 }
 
 export async function getActiveCities(): Promise<City[]> {
+  if (demoEnabled()) return DEMO_CITIES;
   const sb = supabasePublic();
   if (!sb) return [];
   const { data } = await sb.from("cities").select("*").eq("is_active", true).order("name_he");
@@ -28,6 +30,7 @@ export async function getActiveCities(): Promise<City[]> {
 }
 
 export async function getCityBySlug(slug: string): Promise<City | null> {
+  if (demoEnabled()) return DEMO_CITIES.find((c) => c.slug === slug) ?? null;
   const sb = supabasePublic();
   if (!sb) return null;
   const { data } = await sb.from("cities").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
@@ -35,6 +38,7 @@ export async function getCityBySlug(slug: string): Promise<City | null> {
 }
 
 export async function getGenres(): Promise<Genre[]> {
+  if (demoEnabled()) return DEMO_GENRES;
   const sb = supabasePublic();
   if (!sb) return [];
   const { data } = await sb.from("genres").select("*").order("slug");
@@ -42,6 +46,7 @@ export async function getGenres(): Promise<Genre[]> {
 }
 
 export async function getGenreBySlug(slug: string): Promise<Genre | null> {
+  if (demoEnabled()) return DEMO_GENRES.find((g) => g.slug === slug) ?? null;
   const sb = supabasePublic();
   if (!sb) return null;
   const { data } = await sb.from("genres").select("*").eq("slug", slug).maybeSingle();
@@ -52,6 +57,17 @@ type WindowOpts = { cityId?: string; genreId?: string; limit?: number };
 
 /** Published events inside [from, to), soonest first. */
 export async function getEventsInWindow(from: Date, to: Date, opts: WindowOpts = {}): Promise<EventFull[]> {
+  if (demoEnabled()) {
+    return demoEvents()
+      .filter((e) => {
+        const t = new Date(e.starts_at).getTime();
+        if (t < from.getTime() || t >= to.getTime()) return false;
+        if (opts.cityId && e.city_id !== opts.cityId) return false;
+        if (opts.genreId && !e.genres.some((g) => g.id === opts.genreId)) return false;
+        return true;
+      })
+      .slice(0, opts.limit ?? 100);
+  }
   const sb = supabasePublic();
   if (!sb) return [];
   let q = sb
@@ -70,6 +86,7 @@ export async function getEventsInWindow(from: Date, to: Date, opts: WindowOpts =
 }
 
 export async function getVenueBySlug(slug: string): Promise<Venue | null> {
+  if (demoEnabled()) return DEMO_VENUES.find((v) => v.slug === slug) ?? null;
   const sb = supabasePublic();
   if (!sb) return null;
   const { data } = await sb.from("venues").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
@@ -77,6 +94,7 @@ export async function getVenueBySlug(slug: string): Promise<Venue | null> {
 }
 
 export async function getVenuesForCity(cityId: string): Promise<Venue[]> {
+  if (demoEnabled()) return DEMO_VENUES.filter((v) => v.city_id === cityId);
   const sb = supabasePublic();
   if (!sb) return [];
   const { data } = await sb.from("venues").select("*").eq("city_id", cityId).eq("is_active", true).order("name_he");
@@ -84,6 +102,8 @@ export async function getVenuesForCity(cityId: string): Promise<Venue[]> {
 }
 
 export async function getUpcomingEventsForVenue(venueId: string, limit = 30): Promise<EventFull[]> {
+  if (demoEnabled())
+    return demoEvents().filter((e) => e.venue_id === venueId).slice(0, limit);
   const sb = supabasePublic();
   if (!sb) return [];
   const { data } = await sb
@@ -98,6 +118,8 @@ export async function getUpcomingEventsForVenue(venueId: string, limit = 30): Pr
 }
 
 export async function getUpcomingEventsForOrganizer(organizerId: string, limit = 30): Promise<EventFull[]> {
+  if (demoEnabled())
+    return demoEvents().filter((e) => e.organizer_id === organizerId).slice(0, limit);
   const sb = supabasePublic();
   if (!sb) return [];
   const { data } = await sb
@@ -112,6 +134,7 @@ export async function getUpcomingEventsForOrganizer(organizerId: string, limit =
 }
 
 export async function getEventBySlug(slug: string): Promise<EventFull | null> {
+  if (demoEnabled()) return demoEvents().find((e) => e.slug === slug) ?? null;
   const sb = supabasePublic();
   if (!sb) return null;
   const { data } = await sb.from("events").select(EVENT_SELECT).eq("slug", slug).maybeSingle();
@@ -119,6 +142,7 @@ export async function getEventBySlug(slug: string): Promise<EventFull | null> {
 }
 
 export async function getOrganizerBySlug(slug: string): Promise<Organizer | null> {
+  if (demoEnabled()) return DEMO_ORGANIZERS.find((o) => o.slug === slug) ?? null;
   const sb = supabasePublic();
   if (!sb) return null;
   const { data } = await sb.from("organizers").select("*").eq("slug", slug).maybeSingle();
@@ -129,6 +153,7 @@ export async function getOrganizerBySlug(slug: string): Promise<Organizer | null
 export async function getAllPublishedEvents(): Promise<
   Pick<EventFull, "slug" | "updated_at" | "starts_at">[]
 > {
+  if (demoEnabled()) return demoEvents();
   const sb = supabasePublic();
   if (!sb) return [];
   const { data } = await sb
@@ -142,6 +167,7 @@ export async function getAllPublishedEvents(): Promise<
 }
 
 export async function getAllVenues(): Promise<Venue[]> {
+  if (demoEnabled()) return DEMO_VENUES;
   const sb = supabasePublic();
   if (!sb) return [];
   const { data } = await sb.from("venues").select("*").eq("is_active", true);
@@ -149,6 +175,7 @@ export async function getAllVenues(): Promise<Venue[]> {
 }
 
 export async function getAllOrganizers(): Promise<Organizer[]> {
+  if (demoEnabled()) return DEMO_ORGANIZERS;
   const sb = supabasePublic();
   if (!sb) return [];
   const { data } = await sb.from("organizers").select("*");
