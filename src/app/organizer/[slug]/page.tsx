@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { EventCard } from "@/components/EventCard";
+import { EventCard, EventGrid } from "@/components/EventCard";
 import { JsonLd } from "@/components/JsonLd";
 import { updatedAgoHe } from "@/lib/dates";
 import { getOrganizerBySlug, getUpcomingEventsForOrganizer } from "@/lib/queries";
@@ -44,29 +44,29 @@ export default async function OrganizerPage({ params }: Props) {
   ];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-10">
       <JsonLd data={[itemListJsonLd(events), breadcrumbJsonLd(crumbs)]} />
-      <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">
+      <h1 className="text-3xl font-black leading-tight sm:text-4xl">
         האירועים של {organizer.name_he}
       </h1>
       <div className="mt-2 flex gap-3 text-sm">
         {organizer.instagram ? (
-          <a href={organizer.instagram} rel="nofollow noopener" target="_blank" className="text-violet-700 underline">אינסטגרם</a>
+          <a href={organizer.instagram} rel="nofollow noopener" target="_blank" className="text-neon-300 underline">אינסטגרם</a>
         ) : null}
         {organizer.website ? (
-          <a href={organizer.website} rel="nofollow noopener" target="_blank" className="text-violet-700 underline">אתר</a>
+          <a href={organizer.website} rel="nofollow noopener" target="_blank" className="text-neon-300 underline">אתר</a>
         ) : null}
       </div>
-      {updated ? <p className="mt-1 text-sm text-zinc-400">{updated}</p> : null}
+      {updated ? <p className="mt-1 text-sm text-zinc-500">{updated}</p> : null}
 
       {events.length > 0 ? (
-        <div className="mt-6 space-y-4">
+        <EventGrid>
           {events.map((e) => (
             <EventCard key={e.id} event={e} showDate />
           ))}
-        </div>
+        </EventGrid>
       ) : (
-        <p className="mt-6 rounded-xl bg-white p-4 text-zinc-600">אין כרגע אירועים מפורסמים.</p>
+        <p className="mt-6 surface p-4 text-zinc-500">אין כרגע אירועים מפורסמים.</p>
       )}
 
       <div className="mt-8">

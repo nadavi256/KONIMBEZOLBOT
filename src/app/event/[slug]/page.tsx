@@ -7,7 +7,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { eventNightDate, hebrewDate, israelTime, updatedAgoHe } from "@/lib/dates";
 import { ageLabel, priceLabel } from "@/lib/format";
 import { getEventBySlug, getUpcomingEventsForVenue } from "@/lib/queries";
-import { EventCard } from "@/components/EventCard";
+import { EventCard, EventGrid } from "@/components/EventCard";
 import { breadcrumbJsonLd, eventJsonLd, type Crumb } from "@/lib/seo";
 import { clamp, ogImageUrl, SITE_NAME } from "@/lib/site";
 
@@ -69,7 +69,7 @@ export default async function EventPage({ params }: Props) {
   ];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-10">
       <JsonLd data={[eventJsonLd(event), breadcrumbJsonLd(crumbs)]} />
       {event.image_url ? (
         <div className="relative mb-5 h-56 w-full overflow-hidden rounded-2xl sm:h-72">
@@ -78,11 +78,11 @@ export default async function EventPage({ params }: Props) {
       ) : null}
 
       {event.status === "cancelled" ? (
-        <p className="mb-4 rounded-xl bg-red-100 p-3 font-semibold text-red-800">האירוע בוטל</p>
+        <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/15 p-3 font-semibold text-red-300">האירוע בוטל</p>
       ) : null}
 
-      <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">{event.title_he}</h1>
-      <p className="mt-2 text-lg text-zinc-700">
+      <h1 className="text-3xl font-black leading-tight sm:text-4xl">{event.title_he}</h1>
+      <p className="mt-2 text-lg text-zinc-300">
         {hebrewDate(nightDate)}, מ-{israelTime(event.starts_at)} ב
         <Link href={`/venue/${event.venue.slug}`} className="font-semibold hover:underline">
           {event.venue.name_he}
@@ -91,16 +91,16 @@ export default async function EventPage({ params }: Props) {
         {price ? ` · ${price}` : ""}
         {age ? ` · ${age}` : ""}
       </p>
-      {updated ? <p className="mt-1 text-sm text-zinc-400">{updated}</p> : null}
+      {updated ? <p className="mt-1 text-sm text-zinc-500">{updated}</p> : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {event.genres.map((g) => (
-          <Link key={g.id} href={`/${event.city.slug}/${g.slug}`} className="rounded-full bg-violet-100 px-3 py-1 text-sm text-violet-800 hover:bg-violet-200">
+          <Link key={g.id} href={`/${event.city.slug}/${g.slug}`} className="rounded-full border border-glow-500/40 bg-glow-500/10 px-3 py-1 text-sm text-glow-300 hover:border-neon-500/60 hover:text-neon-300">
             {g.name_he}
           </Link>
         ))}
         {event.is_sold_out ? (
-          <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">אזל</span>
+          <span className="rounded-full bg-red-600 px-3 py-1 text-sm font-bold text-white">אזל</span>
         ) : null}
       </div>
 
@@ -109,13 +109,13 @@ export default async function EventPage({ params }: Props) {
           href={event.ticket_url}
           rel="nofollow noopener"
           target="_blank"
-          className="mt-5 inline-block rounded-xl bg-violet-600 px-6 py-3 font-semibold text-white hover:bg-violet-700"
+          className="mt-5 inline-block btn-neon !px-6 !py-3 !text-base"
         >
           לכרטיסים
         </a>
       ) : null}
 
-      <dl className="mt-6 grid gap-3 rounded-2xl bg-white p-5 sm:grid-cols-2">
+      <dl className="mt-6 grid gap-3 surface p-5 sm:grid-cols-2">
         <div>
           <dt className="text-sm text-zinc-500">תאריך</dt>
           <dd className="font-medium">{hebrewDate(nightDate)}</dd>
@@ -169,18 +169,18 @@ export default async function EventPage({ params }: Props) {
       {event.description_he ? (
         <section className="mt-6">
           <h2 className="text-xl font-bold">על האירוע</h2>
-          <p className="mt-2 whitespace-pre-line text-zinc-700">{event.description_he}</p>
+          <p className="mt-2 whitespace-pre-line text-zinc-300">{event.description_he}</p>
         </section>
       ) : null}
 
       {moreAtVenue.length > 0 ? (
         <section className="mt-8">
           <h2 className="text-xl font-bold">עוד ב{event.venue.name_he}</h2>
-          <div className="mt-3 space-y-4">
+          <EventGrid>
             {moreAtVenue.map((e) => (
               <EventCard key={e.id} event={e} showDate />
             ))}
-          </div>
+          </EventGrid>
         </section>
       ) : null}
 

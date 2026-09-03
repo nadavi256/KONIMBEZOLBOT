@@ -7,11 +7,11 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
       <ol className="flex flex-wrap items-center gap-1">
         {crumbs.map((c, i) => (
           <li key={c.href} className="flex items-center gap-1">
-            {i > 0 ? <span aria-hidden>‹</span> : null}
+            {i > 0 ? <span aria-hidden className="text-zinc-600">‹</span> : null}
             {i === crumbs.length - 1 ? (
-              <span className="text-zinc-700">{c.name}</span>
+              <span className="text-zinc-300">{c.name}</span>
             ) : (
-              <Link href={c.href} className="hover:underline">
+              <Link href={c.href} className="transition hover:text-neon-300">
                 {c.name}
               </Link>
             )}

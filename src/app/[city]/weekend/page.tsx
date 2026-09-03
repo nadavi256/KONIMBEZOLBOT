@@ -73,9 +73,9 @@ export default async function WeekendPage({ params }: Props) {
         crumbs={crumbs}
         showDates
         fallback={
-          <p className="rounded-2xl bg-white p-5 text-zinc-700">
+          <p className="surface p-5 text-zinc-300">
             אין עדיין אירועים מפורסמים לסופ&quot;ש הזה ב{city.name_he}. בדקו{" "}
-            <Link href={`/${city.slug}/tonight`} className="text-violet-700 underline">
+            <Link href={`/${city.slug}/tonight`} className="text-neon-300 underline">
               מה קורה הערב
             </Link>{" "}
             או חזרו בהמשך השבוע.

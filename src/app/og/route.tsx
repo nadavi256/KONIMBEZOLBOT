@@ -40,12 +40,13 @@ export async function GET(request: Request) {
           flexDirection: "column",
           justifyContent: "center",
           padding: "72px",
-          background: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 60%, #7c3aed 100%)",
+          background:
+            "radial-gradient(48rem 30rem at 90% -10%, rgba(255,45,132,0.35), transparent 60%), linear-gradient(135deg, #0a0713 0%, #251b3a 55%, #7c3aed 130%)",
           color: "white",
           fontFamily: font ? "Heebo" : "sans-serif",
         }}
       >
-        <div style={{ display: "flex", fontSize: 32, color: "#c4b5fd", marginBottom: 24 }}>
+        <div style={{ display: "flex", fontSize: 32, color: "#ff5ca2", marginBottom: 24 }}>
           {SITE_NAME}
         </div>
         <div

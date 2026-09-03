@@ -3,7 +3,7 @@ import type { Faq } from "@/lib/answer";
 import type { Crumb } from "@/lib/seo";
 import type { EventFull } from "@/lib/types";
 import { Breadcrumbs } from "./Breadcrumbs";
-import { EventCard } from "./EventCard";
+import { EventCard, EventGrid } from "./EventCard";
 import { FaqSection } from "./FaqSection";
 import { InternalLinks, type LinkGroup } from "./InternalLinks";
 
@@ -33,19 +33,21 @@ export function ListPage({
 }) {
   const updated = updatedAgoHe(events.map((e) => e.updated_at));
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">{h1}</h1>
-      <p className="mt-3 text-lg text-zinc-700">{answer}</p>
-      {updated ? <p className="mt-1 text-sm text-zinc-400">{updated}</p> : null}
+    <main className="mx-auto max-w-5xl px-4 py-8">
+      <h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-4xl">{h1}</h1>
+      <p className="mt-3 max-w-3xl text-lg text-zinc-300">{answer}</p>
+      {updated ? <p className="mt-1 text-sm text-zinc-500">{updated}</p> : null}
 
       {events.length > 0 ? (
-        <div className="mt-6 space-y-4">
-          {events.map((e) => (
-            <EventCard key={e.id} event={e} showDate={showDates} />
-          ))}
+        <div className="mt-7">
+          <EventGrid>
+            {events.map((e) => (
+              <EventCard key={e.id} event={e} showDate={showDates} />
+            ))}
+          </EventGrid>
         </div>
       ) : (
-        <div className="mt-6">{fallback}</div>
+        <div className="mt-7">{fallback}</div>
       )}
 
       <FaqSection faqs={faqs} />

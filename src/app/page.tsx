@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EventCard } from "@/components/EventCard";
+import { EventCard, EventGrid } from "@/components/EventCard";
 import { JsonLd } from "@/components/JsonLd";
 import { answerSentence, buildFaq } from "@/lib/answer";
 import { dayWindow, hebrewDate, todayInIsrael, updatedAgoHe } from "@/lib/dates";
@@ -37,43 +37,53 @@ export default async function HomePage() {
     .filter((g) => g.events.length > 0);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-10">
       <JsonLd data={[itemListJsonLd(events), ...(faqs.length ? [faqJsonLd(faqs)] : [])]} />
-      <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">
-        מה יש הערב? {hebrewDate(today)}
-      </h1>
-      <p className="mt-3 text-lg text-zinc-700">{answerSentence(events, "הערב בישראל")}</p>
-      {updated ? <p className="mt-1 text-sm text-zinc-400">{updated}</p> : null}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {cities.map((c) => (
-          <Link
-            key={c.id}
-            href={`/${c.slug}`}
-            className="rounded-full border border-violet-300 bg-white px-4 py-1.5 text-sm font-medium text-violet-700 hover:bg-violet-50"
-          >
-            {c.name_he}
-          </Link>
-        ))}
-      </div>
+      {/* hero */}
+      <section className="relative">
+        <h1 className="text-4xl font-black leading-tight sm:text-5xl">
+          מה יש <span className="text-neon-gradient">הערב</span>?
+          <span className="mt-1 block text-2xl font-bold text-zinc-400 sm:text-3xl">
+            {hebrewDate(today)}
+          </span>
+        </h1>
+        <p className="mt-4 max-w-2xl text-lg text-zinc-300">{answerSentence(events, "הערב בישראל")}</p>
+        {updated ? <p className="mt-1 text-sm text-zinc-500">{updated}</p> : null}
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          {cities.map((c) => (
+            <Link
+              key={c.id}
+              href={`/${c.slug}`}
+              className="rounded-full border border-white/15 bg-night-800/80 px-5 py-2 text-sm font-bold text-zinc-200 transition hover:border-neon-500/60 hover:text-white hover:shadow-[0_0_20px_rgba(255,45,132,0.25)]"
+            >
+              {c.name_he}
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {byCity.length > 0 ? (
         byCity.map(({ city, events: cityEvents }) => (
-          <section key={city.id} className="mt-8">
-            <h2 className="text-xl font-bold">
-              <Link href={`/${city.slug}/tonight`} className="hover:underline">
-                הערב ב{city.name_he}
+          <section key={city.id} className="mt-12">
+            <div className="mb-4 flex items-baseline justify-between">
+              <h2 className="text-2xl font-black">
+                הערב ב<span className="text-neon-gradient">{city.name_he}</span>
+              </h2>
+              <Link href={`/${city.slug}/tonight`} className="text-sm font-medium text-glow-300 hover:text-neon-300">
+                לכל האירועים ←
               </Link>
-            </h2>
-            <div className="mt-3 space-y-4">
+            </div>
+            <EventGrid>
               {cityEvents.map((e) => (
                 <EventCard key={e.id} event={e} />
               ))}
-            </div>
+            </EventGrid>
           </section>
         ))
       ) : (
-        <p className="mt-8 rounded-xl bg-white p-5 text-zinc-600">
+        <p className="surface mt-10 p-6 text-zinc-400">
           אין אירועים מפורסמים להערב. בחרו עיר למעלה כדי לראות מה קורה בסופ&quot;ש.
         </p>
       )}

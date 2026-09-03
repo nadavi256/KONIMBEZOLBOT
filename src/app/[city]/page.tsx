@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EventCard } from "@/components/EventCard";
+import { EventCard, EventGrid } from "@/components/EventCard";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { answerSentence, buildFaq } from "@/lib/answer";
@@ -70,7 +70,7 @@ export default async function CityHubPage({ params }: Props) {
   ];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-10">
       <JsonLd
         data={[
           itemListJsonLd(all),
@@ -78,49 +78,53 @@ export default async function CityHubPage({ params }: Props) {
           breadcrumbJsonLd(crumbs),
         ]}
       />
-      <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">
-        מסיבות ואירועים ב{city.name_he}
+      <h1 className="text-3xl font-black leading-tight sm:text-4xl">
+        מסיבות ואירועים ב<span className="text-neon-gradient">{city.name_he}</span>
       </h1>
-      <p className="mt-3 text-lg text-zinc-700">{answerSentence(all, scope)}</p>
-      {updated ? <p className="mt-1 text-sm text-zinc-400">{updated}</p> : null}
+      <p className="mt-3 max-w-3xl text-lg text-zinc-300">{answerSentence(all, scope)}</p>
+      {updated ? <p className="mt-1 text-sm text-zinc-500">{updated}</p> : null}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href={`/${city.slug}/tonight`} className="rounded-full bg-violet-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-violet-700">הערב</Link>
-        <Link href={`/${city.slug}/tomorrow`} className="rounded-full border border-violet-300 bg-white px-4 py-1.5 text-sm font-medium text-violet-700 hover:bg-violet-50">מחר</Link>
-        <Link href={`/${city.slug}/weekend`} className="rounded-full border border-violet-300 bg-white px-4 py-1.5 text-sm font-medium text-violet-700 hover:bg-violet-50">סופ&quot;ש</Link>
+      <div className="mt-5 flex flex-wrap gap-2">
+        <Link href={`/${city.slug}/tonight`} className="btn-neon">הערב</Link>
+        <Link href={`/${city.slug}/tomorrow`} className="rounded-xl border border-white/15 bg-night-800/80 px-5 py-2.5 text-sm font-bold text-zinc-200 transition hover:border-neon-500/60 hover:text-white">מחר</Link>
+        <Link href={`/${city.slug}/weekend`} className="rounded-xl border border-white/15 bg-night-800/80 px-5 py-2.5 text-sm font-bold text-zinc-200 transition hover:border-neon-500/60 hover:text-white">סופ&quot;ש</Link>
       </div>
 
-      <section className="mt-8">
-        <h2 className="text-xl font-bold">
-          <Link href={`/${city.slug}/tonight`} className="hover:underline">הערב ב{city.name_he}</Link>
+      <section className="mt-12">
+        <h2 className="mb-4 text-2xl font-black">
+          <Link href={`/${city.slug}/tonight`} className="hover:text-neon-300">הערב ב{city.name_he}</Link>
         </h2>
         {tonight.length > 0 ? (
-          <div className="mt-3 space-y-4">
+          <EventGrid>
             {tonight.map((e) => <EventCard key={e.id} event={e} />)}
-          </div>
+          </EventGrid>
         ) : (
-          <p className="mt-3 text-zinc-600">אין אירועים מפורסמים להערב.</p>
+          <p className="text-zinc-500">אין אירועים מפורסמים להערב.</p>
         )}
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-xl font-bold">
-          <Link href={`/${city.slug}/weekend`} className="hover:underline">בסופ&quot;ש ב{city.name_he}</Link>
+      <section className="mt-12">
+        <h2 className="mb-4 text-2xl font-black">
+          <Link href={`/${city.slug}/weekend`} className="hover:text-neon-300">בסופ&quot;ש ב{city.name_he}</Link>
         </h2>
         {weekend.length > 0 ? (
-          <div className="mt-3 space-y-4">
+          <EventGrid>
             {weekend.map((e) => <EventCard key={e.id} event={e} showDate />)}
-          </div>
+          </EventGrid>
         ) : (
-          <p className="mt-3 text-zinc-600">אין עדיין אירועים מפורסמים לסופ&quot;ש.</p>
+          <p className="text-zinc-500">אין עדיין אירועים מפורסמים לסופ&quot;ש.</p>
         )}
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-xl font-bold">לפי ז&apos;אנר</h2>
-        <div className="mt-3 flex flex-wrap gap-2">
+      <section className="mt-12">
+        <h2 className="text-2xl font-black">לפי ז&apos;אנר</h2>
+        <div className="mt-4 flex flex-wrap gap-2">
           {genres.map((g) => (
-            <Link key={g.id} href={`/${city.slug}/${g.slug}`} className="rounded-full bg-zinc-200 px-3 py-1 text-sm hover:bg-zinc-300">
+            <Link
+              key={g.id}
+              href={`/${city.slug}/${g.slug}`}
+              className="rounded-full border border-glow-500/40 bg-glow-500/10 px-4 py-1.5 text-sm font-medium text-glow-300 transition hover:border-neon-500/60 hover:text-neon-300"
+            >
               {g.name_he}
             </Link>
           ))}
@@ -128,13 +132,13 @@ export default async function CityHubPage({ params }: Props) {
       </section>
 
       {venues.length > 0 ? (
-        <section className="mt-8">
-          <h2 className="text-xl font-bold">מקומות ב{city.name_he}</h2>
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        <section className="mt-12">
+          <h2 className="text-2xl font-black">מקומות ב{city.name_he}</h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {venues.map((v) => (
               <li key={v.id}>
-                <Link href={`/venue/${v.slug}`} className="block rounded-xl border border-zinc-200 bg-white p-3 hover:border-violet-300">
-                  <span className="font-semibold">{v.name_he}</span>
+                <Link href={`/venue/${v.slug}`} className="surface block p-4 transition hover:border-neon-500/40">
+                  <span className="font-bold text-zinc-100">{v.name_he}</span>
                   {v.address ? <span className="block text-sm text-zinc-500">{v.address}</span> : null}
                 </Link>
               </li>

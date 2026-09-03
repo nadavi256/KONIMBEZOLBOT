@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { EventCard } from "@/components/EventCard";
+import { EventCard, EventGrid } from "@/components/EventCard";
 import { JsonLd } from "@/components/JsonLd";
 import { updatedAgoHe } from "@/lib/dates";
 import { getCityBySlug, getUpcomingEventsForVenue, getVenueBySlug } from "@/lib/queries";
@@ -59,7 +59,7 @@ export default async function VenuePage({ params }: Props) {
   ];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-10">
       <JsonLd
         data={[
           venueJsonLd(venue, city?.name_he ?? ""),
@@ -72,37 +72,37 @@ export default async function VenuePage({ params }: Props) {
           <Image src={venue.image_url} alt={venue.name_he} fill sizes="(max-width: 768px) 100vw, 768px" className="object-cover" priority />
         </div>
       ) : null}
-      <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">
+      <h1 className="text-3xl font-black leading-tight sm:text-4xl">
         {venue.name_he}
         {city ? ` — ${city.name_he}` : ""}
       </h1>
       {venue.address ? <p className="mt-1 text-zinc-500">{venue.address}</p> : null}
-      {venue.description_he ? <p className="mt-3 text-lg text-zinc-700">{venue.description_he}</p> : null}
+      {venue.description_he ? <p className="mt-3 text-lg text-zinc-300">{venue.description_he}</p> : null}
       <div className="mt-2 flex gap-3 text-sm">
         {venue.instagram ? (
-          <a href={venue.instagram} rel="nofollow noopener" target="_blank" className="text-violet-700 underline">אינסטגרם</a>
+          <a href={venue.instagram} rel="nofollow noopener" target="_blank" className="text-neon-300 underline">אינסטגרם</a>
         ) : null}
         {venue.website ? (
-          <a href={venue.website} rel="nofollow noopener" target="_blank" className="text-violet-700 underline">אתר</a>
+          <a href={venue.website} rel="nofollow noopener" target="_blank" className="text-neon-300 underline">אתר</a>
         ) : null}
       </div>
 
       <section className="mt-8">
         <h2 className="text-xl font-bold">אירועים קרובים ב{venue.name_he}</h2>
-        {updated ? <p className="mt-1 text-sm text-zinc-400">{updated}</p> : null}
+        {updated ? <p className="mt-1 text-sm text-zinc-500">{updated}</p> : null}
         {events.length > 0 ? (
-          <div className="mt-3 space-y-4">
+          <EventGrid>
             {events.map((e) => (
               <EventCard key={e.id} event={e} showDate />
             ))}
-          </div>
+          </EventGrid>
         ) : (
-          <p className="mt-3 rounded-xl bg-white p-4 text-zinc-600">
+          <p className="mt-3 surface p-4 text-zinc-500">
             אין כרגע אירועים מפורסמים.{" "}
             {city ? (
               <>
                 ראו{" "}
-                <Link href={`/${city.slug}`} className="text-violet-700 underline">
+                <Link href={`/${city.slug}`} className="text-neon-300 underline">
                   מה עוד קורה ב{city.name_he}
                 </Link>
                 .

@@ -1,7 +1,23 @@
 @import "tailwindcss";
 
+/* NIGHTLIFE dark theme — deep club-night purples with neon pink accents */
+@theme {
+  --color-night-950: #0a0713;
+  --color-night-900: #110c1d;
+  --color-night-800: #1a1329;
+  --color-night-700: #251b3a;
+  --color-neon-600: #e11d74;
+  --color-neon-500: #ff2d84;
+  --color-neon-400: #ff5ca2;
+  --color-neon-300: #ff8fc0;
+  --color-glow-600: #7c3aed;
+  --color-glow-500: #8b5cf6;
+  --color-glow-400: #a78bfa;
+  --color-glow-300: #c4b5fd;
+}
+
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html {
@@ -9,5 +25,37 @@ html {
 }
 
 body {
-  @apply bg-zinc-50 text-zinc-900 antialiased;
+  @apply bg-night-950 text-zinc-100 antialiased;
+  background-image:
+    radial-gradient(60rem 40rem at 85% -10%, rgba(124, 58, 237, 0.16), transparent 60%),
+    radial-gradient(50rem 35rem at 0% 10%, rgba(255, 45, 132, 0.1), transparent 55%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(255, 45, 132, 0.4);
+}
+
+/* neon gradient CTA */
+.btn-neon {
+  @apply inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-bold text-white transition;
+  background-image: linear-gradient(120deg, #ff2d84, #a21caf 55%, #7c3aed);
+  box-shadow: 0 4px 24px rgba(255, 45, 132, 0.35);
+}
+.btn-neon:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 4px 32px rgba(255, 45, 132, 0.5);
+}
+
+/* card surface */
+.surface {
+  @apply rounded-2xl border border-white/8 bg-night-900/80;
+}
+
+/* gradient headline text */
+.text-neon-gradient {
+  background-image: linear-gradient(100deg, #ff5ca2, #c4b5fd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

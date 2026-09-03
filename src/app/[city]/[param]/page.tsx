@@ -95,9 +95,9 @@ export default async function CityParamPage({ params }: Props) {
         crumbs={crumbs}
         showDates
         fallback={
-          <p className="rounded-2xl bg-white p-5 text-zinc-700">
+          <p className="surface p-5 text-zinc-300">
             אין אירועי {genre.name_he} מפורסמים ב{city.name_he} בשבועיים הקרובים. אולי{" "}
-            <Link href={`/${city.slug}/weekend`} className="text-violet-700 underline">
+            <Link href={`/${city.slug}/weekend`} className="text-neon-300 underline">
               בסופ&quot;ש
             </Link>{" "}
             יש משהו אחר?

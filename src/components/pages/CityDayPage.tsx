@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EventCard } from "@/components/EventCard";
+import { EventCard, EventGrid } from "@/components/EventCard";
 import { JsonLd } from "@/components/JsonLd";
 import { ListPage } from "@/components/ListPage";
 import { answerSentence, buildFaq } from "@/lib/answer";
@@ -118,13 +118,13 @@ export async function CityDayPage({
         linkGroups={linkGroups}
         crumbs={crumbs}
         fallback={
-          <div className="rounded-2xl bg-white p-5">
-            <p className="text-zinc-700">
+          <div className="surface p-5">
+            <p className="text-zinc-300">
               אין אירועים מפורסמים {p.scope}.{" "}
               {weekendFallback.length > 0 ? "הנה מה שיש בסופ״ש:" : (
                 <>
                   בדקו את{" "}
-                  <Link href={`/${city.slug}/weekend`} className="text-violet-700 underline">
+                  <Link href={`/${city.slug}/weekend`} className="text-neon-300 underline">
                     עמוד הסופ״ש של {city.name_he}
                   </Link>
                   .
@@ -132,11 +132,11 @@ export async function CityDayPage({
               )}
             </p>
             {weekendFallback.length > 0 ? (
-              <div className="mt-4 space-y-4">
+              <EventGrid>
                 {weekendFallback.map((e) => (
                   <EventCard key={e.id} event={e} showDate />
                 ))}
-              </div>
+              </EventGrid>
             ) : null}
           </div>
         }
