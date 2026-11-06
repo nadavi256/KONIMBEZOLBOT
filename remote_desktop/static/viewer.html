@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>שליטה מרחוק</title>
+<style>
+  :root { --bg:#0f172a; --panel:#1e293b; --fg:#e2e8f0; --muted:#94a3b8; --accent:#3b82f6; --danger:#dc2626; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+               font-family: system-ui, "Segoe UI", Arial, sans-serif; }
+  #login { max-width:380px; margin:10vh auto 0; padding:28px; background:var(--panel); border-radius:14px; }
+  #login h1 { margin:0 0 18px; font-size:22px; }
+  label { display:block; margin:12px 0 4px; color:var(--muted); font-size:14px; }
+  input { width:100%; padding:10px 12px; font-size:18px; border-radius:8px; border:1px solid #334155;
+          background:#0b1220; color:var(--fg); direction:ltr; text-align:center; }
+  button { padding:10px 14px; border:0; border-radius:8px; background:var(--accent); color:white;
+           font-size:15px; cursor:pointer; }
+  button.danger { background:var(--danger); }
+  button.ghost { background:#334155; }
+  #connectBtn { width:100%; margin-top:20px; font-size:17px; }
+  #msg { margin-top:14px; min-height:20px; color:#fbbf24; font-size:14px; }
+  #session { display:none; height:100%; flex-direction:column; }
+  #toolbar { display:flex; gap:8px; align-items:center; padding:6px 10px; background:var(--panel); flex-wrap:wrap; }
+  #toolbar .spacer { flex:1; }
+  #toolbar select, #toolbar input { width:auto; font-size:14px; padding:6px; }
+  #stage { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#000; }
+  canvas { max-width:100%; max-height:100%; cursor:none; outline:none; image-rendering:auto; }
+  #stats { color:var(--muted); font-size:12px; direction:ltr; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>🖥️ התחברות למחשב מרוחק</h1>
+  <label for="hostId">מזהה המחשב</label>
+  <input id="hostId" placeholder="123 456 789" autocomplete="off" inputmode="numeric">
+  <label for="password">סיסמה</label>
+  <input id="password" type="password" autocomplete="off">
+  <button id="connectBtn">התחבר</button>
+  <div id="msg"></div>
+</div>
+
+<div id="session">
+  <div id="toolbar">
+    <button class="danger" id="disconnectBtn">נתק</button>
+    <button class="ghost" id="fullscreenBtn">מסך מלא</button>
+    <select id="quality" title="איכות">
+      <option value="high">איכות גבוהה</option>
+      <option value="medium" selected>איכות בינונית</option>
+      <option value="low">חיבור איטי</option>
+    </select>
+    <input id="textToSend" placeholder="הקלד טקסט לשליחה (עברית/הדבקה)" style="direction:rtl;min-width:220px">
+    <button class="ghost" id="sendTextBtn">שלח טקסט</button>
+    <span class="spacer"></span>
+    <span id="hostName"></span>
+    <span id="stats"></span>
+  </div>
+  <div id="stage"><canvas id="screen" tabindex="0"></canvas></div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const canvas = $("screen"), ctx = canvas.getContext("2d");
+  let ws = null, connected = false, frames = 0, bytes = 0;
+
+  const PRESETS = {
+    high:   { quality: 80, scale: 1.0,  fps: 20 },
+    medium: { quality: 60, scale: 1.0,  fps: 15 },
+    low:    { quality: 40, scale: 0.6,  fps: 8  },
+  };
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("id")) $("hostId").value = params.get("id");
+
+  function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+  function setMsg(t) { $("msg").textContent = t || ""; }
+
+  function showSession(on) {
+    $("login").style.display = on ? "none" : "block";
+    $("session").style.display = on ? "flex" : "none";
+    if (on) canvas.focus();
+  }
+
+  function connect() {
+    const id = $("hostId").value.replace(/\s+/g, "");
+    const password = $("password").value;
+    if (!id || !password) { setMsg("נא למלא מזהה וסיסמה"); return; }
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(`${proto}//${location.host}/ws/viewer`);
+    ws.binaryType = "blob";
+    $("connectBtn").disabled = true;
+    setMsg("מתחבר...");
+
+    ws.onopen = () => send({ id, password });
+    ws.onmessage = async (e) => {
+      if (typeof e.data !== "string") {
+        // a JPEG frame
+        frames++; bytes += e.data.size;
+        try {
+          const bmp = await createImageBitmap(e.data);
+          if (canvas.width !== bmp.width || canvas.height !== bmp.height) {
+            canvas.width = bmp.width; canvas.height = bmp.height;
+          }
+          ctx.drawImage(bmp, 0, 0);
+          bmp.close();
+        } finally {
+          send({ type: "ack" });
+        }
+        return;
+      }
+      const m = JSON.parse(e.data);
+      if (m.type === "waiting") setMsg(m.message);
+      else if (m.type === "error") { setMsg(m.error); }
+      else if (m.type === "connected") {
+        connected = true; setMsg("");
+        $("hostName").textContent = m.name ? `מחובר ל: ${m.name}` : "";
+        showSession(true);
+        send({ type: "settings", ...PRESETS[$("quality").value] });
+      } else if (m.type === "session_end") {
+        setMsg(m.reason || "החיבור הסתיים");
+        ws.close();
+      }
+    };
+    ws.onclose = () => {
+      $("connectBtn").disabled = false;
+      if (connected) { connected = false; showSession(false); if (!$("msg").textContent) setMsg("החיבור נותק"); }
+      ws = null;
+    };
+    ws.onerror = () => setMsg("שגיאת חיבור לשרת");
+  }
+
+  // ---------------------------------------------------------- input capture --
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+  }
+  let lastMove = 0, pendingMove = null;
+  canvas.addEventListener("mousemove", e => {
+    if (!connected) return;
+    pendingMove = pos(e);
+    const now = performance.now();
+    if (now - lastMove > 16) { lastMove = now; send({ type: "mouse_move", ...pendingMove }); pendingMove = null; }
+  });
+  setInterval(() => { if (pendingMove && connected) { send({ type: "mouse_move", ...pendingMove }); pendingMove = null; } }, 30);
+  canvas.addEventListener("mousedown", e => { if (!connected) return; canvas.focus(); e.preventDefault(); send({ type: "mouse_down", button: e.button, ...pos(e) }); });
+  canvas.addEventListener("mouseup",   e => { if (!connected) return; e.preventDefault(); send({ type: "mouse_up",   button: e.button, ...pos(e) }); });
+  canvas.addEventListener("contextmenu", e => e.preventDefault());
+  canvas.addEventListener("wheel", e => {
+    if (!connected) return; e.preventDefault();
+    const k = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1; // lines / pages -> pixels
+    send({ type: "wheel", dx: e.deltaX * k, dy: e.deltaY * k });
+  }, { passive: false });
+
+  canvas.addEventListener("keydown", e => {
+    if (!connected) return;
+    e.preventDefault();
+    send({ type: "key_down", key: e.key, code: e.code });
+  });
+  canvas.addEventListener("keyup", e => {
+    if (!connected) return;
+    e.preventDefault();
+    send({ type: "key_up", key: e.key, code: e.code });
+  });
+  canvas.addEventListener("blur", () => {
+    // release modifiers so Ctrl/Alt don't stay "stuck" on the remote side
+    for (const key of ["Shift", "Control", "Alt", "Meta"]) send({ type: "key_up", key });
+  });
+
+  // ----------------------------------------------------------------- toolbar --
+  $("connectBtn").onclick = connect;
+  $("password").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
+  $("disconnectBtn").onclick = () => { setMsg("החיבור נותק"); ws && ws.close(); };
+  $("fullscreenBtn").onclick = () => {
+    if (document.fullscreenElement) document.exitFullscreen(); else $("session").requestFullscreen();
+    canvas.focus();
+  };
+  $("quality").onchange = () => { send({ type: "settings", ...PRESETS[$("quality").value] }); canvas.focus(); };
+  $("sendTextBtn").onclick = () => {
+    const t = $("textToSend").value; if (!t) return;
+    send({ type: "text", text: t }); $("textToSend").value = ""; canvas.focus();
+  };
+
+  setInterval(() => {
+    if (connected) $("stats").textContent = `${frames} fps · ${(bytes * 8 / 1e6).toFixed(1)} Mbps`;
+    frames = 0; bytes = 0;
+  }, 1000);
+})();
+</script>
+</body>
+</html>
