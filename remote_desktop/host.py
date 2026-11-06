@@ -128,6 +128,7 @@ class InputInjector:
         self.mouse = mouse.Controller()
         self.keyboard = keyboard.Controller()
         self.pressed: set = set()
+        self.last_set: tuple[int, int] | None = None  # where the technician last put the mouse
         K = keyboard.Key
         self.special = {
             "Enter": K.enter, "Backspace": K.backspace, "Tab": K.tab, "Escape": K.esc,
@@ -160,6 +161,7 @@ class InputInjector:
             x = geom["left"] + max(0.0, min(1.0, float(ev["x"]))) * (geom["width"] - 1)
             y = geom["top"] + max(0.0, min(1.0, float(ev["y"]))) * (geom["height"] - 1)
             self.mouse.position = (int(x), int(y))
+            self.last_set = (int(x), int(y))
         if t == "mouse_down":
             self.mouse.press(self.buttons.get(ev.get("button", 0), self.mouse_mod.Button.left))
         elif t == "mouse_up":
@@ -207,6 +209,10 @@ class ScreenCapturer:
         mons = self.sct.monitors
         self.monitor = mons[monitor] if 0 <= monitor < len(mons) else mons[1]
         self.last_digest = b""
+        # Position the technician last moved the mouse to. While the cursor is
+        # still there, the technician already sees their own pointer, so the
+        # remote cursor is not drawn (otherwise two arrows chase each other).
+        self.injected_pos: tuple[int, int] | None = None
 
     @property
     def geometry(self) -> dict:
@@ -239,6 +245,9 @@ class ScreenCapturer:
         from PIL import Image, ImageDraw
         shot = self.sct.grab(self.monitor)
         cur = self.cursor_pos()
+        inj = self.injected_pos
+        if cur is not None and inj is not None and abs(cur[0] - inj[0]) <= 3 and abs(cur[1] - inj[1]) <= 3:
+            cur = None  # technician is driving the mouse - their own pointer is enough
         if cur is not None:
             cur = (cur[0] - self.monitor["left"], cur[1] - self.monitor["top"])
             if not (0 <= cur[0] < shot.size[0] and 0 <= cur[1] < shot.size[1]):
@@ -398,6 +407,8 @@ class HostAgent:
                     await asyncio.to_thread(self.injector.handle, ev, self.capturer.geometry)
                 else:
                     self.injector.handle(ev, self.capturer.geometry)
+                    if self.injector.last_set is not None:
+                        self.capturer.injected_pos = self.injector.last_set
             except Exception as e:  # never let a bad event kill the agent
                 log.debug("input error: %s", e)
 
