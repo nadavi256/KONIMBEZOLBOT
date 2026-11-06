@@ -20,7 +20,7 @@
    GitHub בונה מחדש את שני הקבצים, עם הכתובת בפנים, ומפרסם אותם להורדה.
 
 ## קישורים להורדה
-- דף הבית של השרת (מה ששולחים ללקוח): `https://<הכתובת-שלך>.onrender.com`
+- דף הבית של השרת (מה ששולחים ללקוח): `https://remote-support-j2e3.onrender.com`
 - ללקוח: https://github.com/nadavi256/KONIMBEZOLBOT/releases/latest/download/RemoteSupport.exe
 - לטכנאי: https://github.com/nadavi256/KONIMBEZOLBOT/releases/latest/download/RemoteControl.exe
 
