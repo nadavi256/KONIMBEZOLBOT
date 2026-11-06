@@ -1,0 +1,14 @@
+# One-click hosting for the remote desktop relay server on Render.com
+# (Dashboard -> New -> Blueprint -> pick this repository).
+services:
+  - type: web
+    name: remote-support
+    runtime: docker
+    plan: free
+    branch: claude/relaxed-galileo-ozbmep
+    dockerfilePath: ./remote_desktop/Dockerfile
+    dockerContext: ./remote_desktop
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - remote_desktop/**

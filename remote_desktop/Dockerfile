@@ -4,5 +4,6 @@ COPY requirements-server.txt .
 RUN pip install --no-cache-dir -r requirements-server.txt
 COPY server.py .
 COPY static ./static
+ENV PORT=8080
 EXPOSE 8080
-CMD ["python", "server.py", "--port", "8080"]
+CMD ["python", "server.py"]

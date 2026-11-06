@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>תמיכה מרחוק</title>
+<style>
+  :root { --bg:#f1f5f9; --card:#fff; --fg:#0f172a; --muted:#64748b; --accent:#2563eb; --accent2:#0f766e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f172a; --card:#1e293b; --fg:#e2e8f0; --muted:#94a3b8; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,"Segoe UI",Arial,sans-serif; }
+  main { max-width:820px; margin:0 auto; padding:48px 16px; }
+  h1 { font-size:32px; margin:0 0 8px; text-align:center; }
+  .sub { text-align:center; color:var(--muted); margin:0 0 36px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; }
+  .card { background:var(--card); border-radius:16px; padding:28px; box-shadow:0 4px 20px rgba(0,0,0,.06); }
+  .card h2 { margin:0 0 6px; font-size:22px; }
+  .card p, .card li { color:var(--muted); line-height:1.6; }
+  ol { padding-inline-start:20px; margin:10px 0 20px; }
+  a.btn { display:block; text-align:center; padding:14px; border-radius:10px; color:#fff;
+          text-decoration:none; font-size:18px; font-weight:600; background:var(--accent); }
+  a.btn.tech { background:var(--accent2); }
+  a.link { display:block; text-align:center; margin-top:12px; color:var(--muted); font-size:14px; }
+  .note { margin-top:28px; font-size:13px; color:var(--muted); text-align:center; line-height:1.6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🖥️ תמיכה מרחוק</h1>
+  <p class="sub">חיבור מאובטח למחשב שלך, רק באישור שלך</p>
+  <div class="grid">
+    <div class="card">
+      <h2>צריכים תמיכה?</h2>
+      <ol>
+        <li>הורידו את הקובץ ופתחו אותו</li>
+        <li>הקריאו לטכנאי את <b>המזהה</b> ואת <b>הסיסמה</b></li>
+        <li>אשרו את בקשת החיבור</li>
+      </ol>
+      <a class="btn" href="https://github.com/nadavi256/KONIMBEZOLBOT/releases/latest/download/RemoteSupport.exe">⬇ הורדת תוכנת התמיכה</a>
+    </div>
+    <div class="card">
+      <h2>טכנאי</h2>
+      <ol>
+        <li>פתחו את תוכנת השליטה</li>
+        <li>הקלידו את המזהה והסיסמה של הלקוח</li>
+        <li>לחצו "התחבר"</li>
+      </ol>
+      <a class="btn tech" href="https://github.com/nadavi256/KONIMBEZOLBOT/releases/latest/download/RemoteControl.exe">⬇ הורדת תוכנת השליטה</a>
+      <a class="link" href="/viewer">או התחברו ישירות מהדפדפן ←</a>
+    </div>
+  </div>
+  <p class="note">אם מופיעה ההודעה "Windows protected your PC", לחצו על <b>More info</b> ואז על <b>Run anyway</b>.<br>
+  אפשר לנתק את החיבור בכל רגע מהחלון של תוכנת התמיכה.</p>
+</main>
+</body>
+</html>

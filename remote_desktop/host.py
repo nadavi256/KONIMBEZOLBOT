@@ -36,6 +36,24 @@ log = logging.getLogger("host")
 CONFIG_PATH = Path.home() / ".remote_desktop_host.json"
 
 
+def bundled_config() -> dict:
+    """config.json shipped inside the EXE (or next to host.py when run from source)."""
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
+    try:
+        return json.loads((base / "config.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def to_ws_url(url: str) -> str:
+    url = url.strip().rstrip("/")
+    if url.startswith("https://"):
+        return "wss://" + url[len("https://"):]
+    if url.startswith("http://"):
+        return "ws://" + url[len("http://"):]
+    return url
+
+
 def enable_dpi_awareness() -> None:
     """On Windows, make screen capture and mouse coordinates use real pixels."""
     if sys.platform == "win32":
@@ -218,7 +236,7 @@ class HostAgent:
             self.session_active = False
             if self.injector:
                 self.injector.release_all()
-            self.ui.status("ממתין לחיבור", active=False)
+            self.ui.status("מוכן, ממתין לטכנאי", active=False)
 
     async def run(self) -> None:
         self.loop = asyncio.get_running_loop()
@@ -229,13 +247,13 @@ class HostAgent:
                 await self._connect_once()
                 backoff = 1
             except (aiohttp.ClientError, OSError) as e:
-                self.ui.status(f"אין חיבור לשרת ({e.__class__.__name__}), מנסה שוב...", active=False)
+                self.ui.status("אין חיבור לאינטרנט/שרת, מנסה שוב...", active=False)
             self._session_stopped()
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 30)
 
     async def _connect_once(self) -> None:
-        url = self.args.server.rstrip("/") + "/ws/host"
+        url = to_ws_url(self.args.server) + "/ws/host"
         async with aiohttp.ClientSession() as http:
             async with http.ws_connect(url, heartbeat=20, max_msg_size=64 * 1024) as ws:
                 self.ws = ws
@@ -248,7 +266,7 @@ class HostAgent:
                     self.ui.status(f"השרת דחה את הרישום: {reply.get('error')}", active=False)
                     await asyncio.sleep(10)
                     return
-                self.ui.status("ממתין לחיבור", active=False)
+                self.ui.status("מוכן, ממתין לטכנאי", active=False)
                 stream_task = asyncio.create_task(self._stream_loop())
                 try:
                     async for msg in ws:
@@ -272,7 +290,7 @@ class HostAgent:
                     self.capture_pool, ScreenCapturer, self.args.monitor)
             g = self.capturer.geometry
             await self.ws.send_json({"type": "screen_info", "width": g["width"], "height": g["height"]})
-            self.ui.status("⚠️ המחשב נשלט כרגע מרחוק", active=True)
+            self.ui.status("הטכנאי מחובר ושולט במחשב", active=True)
         elif t == "session_end":
             self._session_stopped()
         elif not self.session_active:
@@ -346,29 +364,33 @@ class ConsoleUI:
 
 
 class TkUI:
-    """Small always-visible window: ID, password, status and an End-session button."""
+    """Simple always-visible window: ID, password, status and an End-session button."""
 
     def __init__(self):
         import tkinter as tk
         self.tk = tk
         self.root = tk.Tk()
-        self.root.title("שליטה מרחוק - מארח")
-        self.root.geometry("340x230")
-        self.root.attributes("-topmost", True)
+        self.root.title("תמיכה מרחוק")
+        self.root.geometry("380x330")
+        self.root.resizable(False, False)
+        self.root.configure(bg="white")
         self.q: queue.Queue = queue.Queue()
-        font_big = ("Segoe UI", 18, "bold")
-        tk.Label(self.root, text="מזהה המחשב:").pack(pady=(10, 0))
-        self.id_var = tk.StringVar()
-        tk.Entry(self.root, textvariable=self.id_var, font=font_big, justify="center",
-                 state="readonly", width=14).pack()
-        tk.Label(self.root, text="סיסמה:").pack(pady=(6, 0))
-        self.pw_var = tk.StringVar()
-        tk.Entry(self.root, textvariable=self.pw_var, font=font_big, justify="center",
-                 state="readonly", width=14).pack()
-        self.status_var = tk.StringVar(value="מתחבר לשרת...")
-        self.status_lbl = tk.Label(self.root, textvariable=self.status_var, pady=6)
+        big = ("Segoe UI", 26, "bold")
+        lbl = dict(bg="white", font=("Segoe UI", 11))
+        tk.Label(self.root, text="הקריאו לטכנאי את המזהה והסיסמה", bg="white",
+                 font=("Segoe UI", 12, "bold")).pack(pady=(14, 6))
+        tk.Label(self.root, text="מזהה", **lbl).pack()
+        self.id_var = tk.StringVar(value="...")
+        tk.Label(self.root, textvariable=self.id_var, font=big, bg="white", fg="#1d4ed8").pack()
+        tk.Label(self.root, text="סיסמה", **lbl).pack(pady=(6, 0))
+        self.pw_var = tk.StringVar(value="...")
+        tk.Label(self.root, textvariable=self.pw_var, font=big, bg="white", fg="#1d4ed8").pack()
+        self.status_var = tk.StringVar(value="מתחבר לשרת")
+        self.status_lbl = tk.Label(self.root, textvariable=self.status_var, bg="white",
+                                   font=("Segoe UI", 11), pady=8)
         self.status_lbl.pack()
-        self.end_btn = tk.Button(self.root, text="סיים חיבור", state="disabled", bg="#c62828", fg="white")
+        self.end_btn = tk.Button(self.root, text="סיים חיבור", state="disabled", bg="#dc2626", fg="white",
+                                 font=("Segoe UI", 11, "bold"), relief="flat", padx=16, pady=4)
         self.end_btn.pack()
         self.agent: HostAgent | None = None
         self.root.after(100, self._poll)
@@ -399,16 +421,19 @@ class TkUI:
                     self.pw_var.set(item[2])
                 elif item[0] == "status":
                     self.status_var.set(item[1])
-                    self.status_lbl.configure(fg="#c62828" if item[2] else "black")
+                    self.status_lbl.configure(fg="#dc2626" if item[2] else "#475569")
                     self.end_btn.configure(state="normal" if item[2] else "disabled")
+                    self.root.attributes("-topmost", bool(item[2]))
                     if item[2]:
                         self.root.deiconify()
                 elif item[0] == "ask":
                     self.root.deiconify()
                     self.root.lift()
-                    ok = messagebox.askyesno("בקשת שליטה מרחוק",
-                                             f"מישהו ({item[1]}) מבקש לשלוט במחשב הזה.\nלאשר?",
+                    self.root.attributes("-topmost", True)
+                    ok = messagebox.askyesno("בקשת חיבור",
+                                             "הטכנאי מבקש להתחבר למחשב שלך.\nלאשר?",
                                              parent=self.root)
+                    self.root.attributes("-topmost", False)
                     item[2].set_result(ok)
         except queue.Empty:
             pass
@@ -421,7 +446,8 @@ class TkUI:
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Remote desktop host agent")
-    p.add_argument("--server", required=True, help="relay URL, e.g. wss://remote.example.com")
+    p.add_argument("--server", default=bundled_config().get("server_url") or None,
+                   help="relay URL, e.g. https://remote.example.com (default: from config.json)")
     p.add_argument("--password", help="fixed password (default: new random password every run)")
     p.add_argument("--no-confirm", action="store_true",
                    help="do not ask for approval (unattended access - only on computers you own)")
@@ -431,6 +457,8 @@ def main() -> None:
     p.add_argument("--console", action="store_true", help="no window, use the terminal")
     args = p.parse_args()
 
+    if not args.server:
+        p.error("no server configured: pass --server or set server_url in config.json")
     if args.password and len(args.password) < 8:
         p.error("password must be at least 8 characters")
     if args.no_confirm and not args.password:

@@ -1,0 +1,68 @@
+name: Remote Desktop - build Windows apps
+
+on:
+  push:
+    paths:
+      - 'remote_desktop/**'
+      - '.github/workflows/remote-desktop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: remote-desktop-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: remote_desktop
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements-host.txt pyinstaller==6.11.1
+
+      - name: Build RemoteSupport.exe (customer)
+        run: pyinstaller --onefile --noconsole --name RemoteSupport --add-data "config.json;." host.py
+
+      - name: Build RemoteControl.exe (technician)
+        run: pyinstaller --onefile --noconsole --name RemoteControl --add-data "config.json;." viewer_launcher.py
+
+      - name: Smoke test on Windows (real screen + mouse)
+        run: python smoke_test.py dist/RemoteSupport.exe
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: remote-desktop-windows
+          path: |
+            remote_desktop/dist/RemoteSupport.exe
+            remote_desktop/dist/RemoteControl.exe
+
+      - name: Publish download links (GitHub Release)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $url = (Get-Content config.json -Raw | ConvertFrom-Json).server_url
+          if (-not $url) {
+            Write-Host "::warning::server_url in remote_desktop/config.json is empty - not publishing a release yet."
+            exit 0
+          }
+          $tag = "remote-v${{ github.run_number }}"
+          gh release create $tag dist/RemoteSupport.exe dist/RemoteControl.exe `
+            --target "${{ github.sha }}" --latest `
+            --title "תמיכה מרחוק $tag" `
+            --notes "Server: $url`n`nRemoteSupport.exe - ללקוח`nRemoteControl.exe - לטכנאי"

@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import secrets
 import ssl
 import time
@@ -194,13 +195,21 @@ class Relay:
         return ws
 
     async def index(self, request: web.Request) -> web.FileResponse:
+        return web.FileResponse(STATIC_DIR / "index.html")
+
+    async def viewer(self, request: web.Request) -> web.FileResponse:
         return web.FileResponse(STATIC_DIR / "viewer.html")
+
+    async def health(self, request: web.Request) -> web.Response:
+        return web.json_response({"ok": True, "hosts_online": len(self.hosts)})
 
 
 def build_app(access_key: str | None = None) -> web.Application:
     relay = Relay(access_key)
     app = web.Application()
     app.router.add_get("/", relay.index)
+    app.router.add_get("/viewer", relay.viewer)
+    app.router.add_get("/health", relay.health)
     app.router.add_get("/ws/host", relay.host_ws)
     app.router.add_get("/ws/viewer", relay.viewer_ws)
     app.router.add_static("/static", STATIC_DIR)
@@ -210,10 +219,11 @@ def build_app(access_key: str | None = None) -> web.Application:
 def main() -> None:
     p = argparse.ArgumentParser(description="Remote desktop relay server")
     p.add_argument("--host", default="0.0.0.0")
-    p.add_argument("--port", type=int, default=8080)
+    p.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8080)))
     p.add_argument("--cert", help="TLS certificate (PEM)")
     p.add_argument("--key", help="TLS private key (PEM)")
-    p.add_argument("--access-key", help="shared key that host agents must present to register")
+    p.add_argument("--access-key", default=os.environ.get("ACCESS_KEY") or None,
+                   help="shared key that host agents must present to register")
     args = p.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -222,7 +232,7 @@ def main() -> None:
         ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_ctx.load_cert_chain(args.cert, args.key)
     else:
-        log.warning("running WITHOUT TLS - use only on a trusted LAN or behind an HTTPS proxy")
+        log.info("serving plain HTTP - put HTTPS in front of it (cloud hosts like Render do this)")
 
     web.run_app(build_app(args.access_key), host=args.host, port=args.port, ssl_context=ssl_ctx)
 

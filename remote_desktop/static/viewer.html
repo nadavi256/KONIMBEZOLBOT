@@ -173,7 +173,11 @@
   $("password").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
   $("disconnectBtn").onclick = () => { setMsg("החיבור נותק"); ws && ws.close(); };
   $("fullscreenBtn").onclick = () => {
-    if (document.fullscreenElement) document.exitFullscreen(); else $("session").requestFullscreen();
+    if (document.fullscreenElement) document.exitFullscreen();
+    else $("session").requestFullscreen().then(() => {
+      // in full screen, send Alt+Tab / Win / Esc to the remote computer too
+      if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock().catch(() => {});
+    });
     canvas.focus();
   };
   $("quality").onchange = () => { send({ type: "settings", ...PRESETS[$("quality").value] }); canvas.focus(); };
