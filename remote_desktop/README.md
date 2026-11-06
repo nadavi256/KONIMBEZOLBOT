@@ -19,10 +19,27 @@
    ```
    GitHub בונה מחדש את שני הקבצים, עם הכתובת בפנים, ומפרסם אותם להורדה.
 
-## קישורים להורדה
-- דף הבית של השרת (מה ששולחים ללקוח): `https://remote-support-j2e3.onrender.com`
-- ללקוח: https://github.com/nadavi256/KONIMBEZOLBOT/releases/latest/download/RemoteSupport.exe
-- לטכנאי: https://github.com/nadavi256/KONIMBEZOLBOT/releases/latest/download/RemoteControl.exe
+## קישורים
+- דף הבית (מבקש סיסמה לפני ההורדה): `https://remote-support-j2e3.onrender.com`
+
+## סיסמה לאתר (`SITE_PASSWORD`)
+הדף הציבורי מוגן בסיסמה, כדי שמי שלוחץ על הקישור באתר לא יוכל להוריד את התוכנות.
+
+ב-Render, בשירות `remote-support`, מגדירים משתנה סביבה:
+
+- שם: `SITE_PASSWORD`
+- ערך: הסיסמה שבחרתם. היא נשמרת רק בהגדרות של Render, לא בקוד ולא ב-`render.yaml`. רווחים בתחילת הערך ובסופו מוסרים.
+
+בלי הערך הזה (או אם הוא ריק) דף הבית, דף הצופה (`/viewer`) וההורדות נשארים סגורים. `/health` ממשיך להחזיר 200, ותוכנות שכבר מותקנות ממשיכות להירשם דרך `/ws/host` בלי הסיסמה הזו.
+
+אחרי סיסמה נכונה הדפדפן נשאר מחובר (עוגייה חתומה). כפתורי ההורדה פונים לשרת עצמו: `/download/support` ללקוח ו-`/download/control` לטכנאי.
+
+`SITE_PASSWORD` היא לא סיסמת החיבור שהלקוח מקריא, והיא לא `ACCESS_KEY` שתוכנת הלקוח שולחת בזמן הרשמה.
+
+קבצי ה-Release ב-GitHub נשארים ציבוריים. מי שכבר מכיר את הכתובת הישירה יכול להוריד גם בלי סיסמת האתר:
+
+- https://github.com/nadavi256/KONIMBEZOLBOT/releases/latest/download/RemoteSupport.exe
+- https://github.com/nadavi256/KONIMBEZOLBOT/releases/latest/download/RemoteControl.exe
 
 ## טוב לדעת
 - **"Windows protected your PC"**: מופיע כי הקובץ לא חתום דיגיטלית. לוחצים **More info → Run anyway**.
@@ -37,12 +54,13 @@
 pip install -r requirements-host.txt
 ```
 ```bash
-python server.py --port 8080
+SITE_PASSWORD='choose-a-password' python server.py --port 8080
 ```
 ```bash
 python host.py --server http://localhost:8080
 ```
-ואז נכנסים בדפדפן ל-`http://localhost:8080/viewer`.
+ואז נכנסים בדפדפן ל-`http://localhost:8080`, מזינים את `SITE_PASSWORD`, ומשם ל-`/viewer`.
+בלי המשתנה האתר נשאר סגור, אבל `/health` והחיבורים של התוכנות עדיין עובדים.
 
 אפשרויות נוספות של `host.py`: `--password` (סיסמה קבועה), `--no-confirm` (גישה בלי אישור, רק למחשבים שלך),
 `--view-only` (צפייה בלבד), `--monitor 2` (מסך שני).

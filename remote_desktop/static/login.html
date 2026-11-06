@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>תמיכה מרחוק</title>
+<style>
+  :root { --bg:#f1f5f9; --card:#fff; --fg:#0f172a; --muted:#64748b; --accent:#2563eb; --line:#cbd5e1; --err:#b91c1c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f172a; --card:#1e293b; --fg:#e2e8f0; --muted:#94a3b8; --line:#334155; --err:#fca5a5; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,"Segoe UI",Arial,sans-serif; }
+  main { max-width:420px; margin:0 auto; padding:12vh 16px 48px; }
+  form { background:var(--card); border-radius:16px; padding:28px; box-shadow:0 4px 20px rgba(0,0,0,.06); }
+  h1 { font-size:28px; margin:0 0 8px; text-align:center; }
+  .sub { text-align:center; color:var(--muted); margin:0 0 22px; line-height:1.5; }
+  label { display:block; margin:0 0 6px; color:var(--muted); font-size:14px; }
+  input { width:100%; padding:12px 14px; font-size:18px; border-radius:10px; border:1px solid var(--line);
+          background:transparent; color:var(--fg); direction:ltr; text-align:right; }
+  button { width:100%; margin-top:16px; padding:14px; border:0; border-radius:10px; color:#fff;
+           font-size:18px; font-weight:600; background:var(--accent); cursor:pointer; }
+  .err { color:var(--err); text-align:center; margin:14px 0 0; font-size:15px; }
+</style>
+</head>
+<body>
+<main>
+  <form method="post" action="/login" autocomplete="off">
+    <h1>🖥️ תמיכה מרחוק</h1>
+    <p class="sub">הזינו את סיסמת הגישה כדי להמשיך</p>
+    <input type="hidden" name="next" value="__NEXT__">
+    <label for="site-password">סיסמה</label>
+    <input id="site-password" name="password" type="password" autocomplete="current-password" autofocus required>
+    <button type="submit">כניסה</button>
+    __ERROR__
+  </form>
+</main>
+</body>
+</html>
