@@ -86,7 +86,9 @@ async def _check_server_process(password: str | None) -> None:
         env["SITE_PASSWORD"] = password
     else:
         env.pop("SITE_PASSWORD", None)
-    log_path = Path(tempfile.mkstemp(prefix="relay-smoke-", suffix=".log")[1])
+    fd, tmp_name = tempfile.mkstemp(prefix="relay-smoke-", suffix=".log")
+    os.close(fd)
+    log_path = Path(tmp_name)
     log_file = log_path.open("w", encoding="utf-8")
     proc = subprocess.Popen(
         [sys.executable, str(Path(__file__).parent / "server.py"), "--port", str(port)],
@@ -148,7 +150,10 @@ async def _check_server_process(password: str | None) -> None:
             proc.wait(timeout=5)
         if not log_file.closed:
             log_file.close()
-        log_path.unlink(missing_ok=True)
+        try:
+            log_path.unlink(missing_ok=True)
+        except PermissionError:
+            pass
 
 
 async def check_site_gate() -> None:
