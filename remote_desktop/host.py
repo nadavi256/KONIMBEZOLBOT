@@ -20,6 +20,7 @@ import hmac
 import io
 import json
 import logging
+import os
 import platform
 import queue
 import secrets
@@ -64,19 +65,46 @@ def enable_dpi_awareness() -> None:
             pass
 
 
-def load_or_create_id() -> str:
+def load_or_create_id() -> tuple[str, str]:
+    """Permanent 9-digit ID plus a private secret that lets this machine
+    reclaim its ID on the server after a network drop."""
+    data: dict = {}
     try:
         data = json.loads(CONFIG_PATH.read_text())
-        if str(data.get("id", "")).isdigit():
-            return data["id"]
     except (OSError, ValueError):
         pass
-    host_id = str(secrets.randbelow(900_000_000) + 100_000_000)  # 9 digits
+    host_id = str(data.get("id", ""))
+    secret = str(data.get("secret", ""))
+    if not host_id.isdigit():
+        host_id = str(secrets.randbelow(900_000_000) + 100_000_000)  # 9 digits
+    if len(secret) < 16:
+        secret = secrets.token_urlsafe(24)
+    if data.get("id") != host_id or data.get("secret") != secret:
+        try:
+            CONFIG_PATH.write_text(json.dumps({"id": host_id, "secret": secret}))
+        except OSError:
+            pass
+    return host_id, secret
+
+
+def setup_logging() -> Path | None:
+    """Log to a file (the EXE has no console) so problems can be diagnosed."""
+    import logging.handlers
+    base = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "RemoteSupport"
+    handlers: list[logging.Handler] = []
+    log_file = None
     try:
-        CONFIG_PATH.write_text(json.dumps({"id": host_id}))
+        base.mkdir(parents=True, exist_ok=True)
+        log_file = base / "host.log"
+        handlers.append(logging.handlers.RotatingFileHandler(
+            log_file, maxBytes=1_000_000, backupCount=1, encoding="utf-8"))
     except OSError:
         pass
-    return host_id
+    if sys.stderr is not None:
+        handlers.append(logging.StreamHandler())
+    logging.basicConfig(level=logging.INFO, handlers=handlers,
+                        format="%(asctime)s %(levelname)s %(message)s")
+    return log_file
 
 
 def random_password(n: int = 8) -> str:
@@ -205,7 +233,7 @@ class HostAgent:
     def __init__(self, args, ui):
         self.args = args
         self.ui = ui
-        self.id = load_or_create_id()
+        self.id, self.secret = load_or_create_id()
         self.password = args.password or random_password()
         self.session_active = False
         self.quality = 60
@@ -220,6 +248,10 @@ class HostAgent:
         self.capture_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.ws: aiohttp.ClientWebSocketResponse | None = None
         self.loop: asyncio.AbstractEventLoop | None = None
+        # After an approved session, the same viewer may reconnect without
+        # asking the customer again (network drop) - for a limited time.
+        self.resume_token = ""
+        self.resume_until = 0.0
 
     # -- called from the UI thread
     def request_end_session(self) -> None:
@@ -229,10 +261,13 @@ class HostAgent:
     async def _end_session(self) -> None:
         if self.ws and not self.ws.closed and self.session_active:
             await self.ws.send_json({"type": "session_end", "reason": "המשתמש בצד המרוחק סיים את החיבור"})
-        self._session_stopped()
+        self._session_stopped(allow_resume=False)  # customer ended it: no silent reconnect
 
-    def _session_stopped(self) -> None:
+    def _session_stopped(self, allow_resume: bool = True) -> None:
+        if self.resume_token:
+            self.resume_until = time.time() + 120 if allow_resume else 0.0
         if self.session_active:
+            log.info("session stopped (resume allowed: %s)", allow_resume)
             self.session_active = False
             if self.injector:
                 self.injector.release_all()
@@ -246,8 +281,13 @@ class HostAgent:
             try:
                 await self._connect_once()
                 backoff = 1
-            except (aiohttp.ClientError, OSError) as e:
+                log.info("connection to server closed")
+            except (aiohttp.ClientError, OSError, asyncio.TimeoutError) as e:
+                log.info("server connection error: %r", e)
                 self.ui.status("אין חיבור לאינטרנט/שרת, מנסה שוב...", active=False)
+            except Exception:
+                log.exception("unexpected error in connection loop")
+                self.ui.status("מתחבר מחדש...", active=False)
             self._session_stopped()
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 30)
@@ -255,10 +295,10 @@ class HostAgent:
     async def _connect_once(self) -> None:
         url = to_ws_url(self.args.server) + "/ws/host"
         async with aiohttp.ClientSession() as http:
-            async with http.ws_connect(url, heartbeat=20, max_msg_size=64 * 1024) as ws:
+            async with http.ws_connect(url, heartbeat=10, max_msg_size=1024 * 1024) as ws:
                 self.ws = ws
                 await ws.send_json({
-                    "type": "register", "id": self.id,
+                    "type": "register", "id": self.id, "secret": self.secret,
                     "name": platform.node(), "access_key": self.args.access_key or "",
                 })
                 reply = await ws.receive_json(timeout=15)
@@ -266,13 +306,19 @@ class HostAgent:
                     self.ui.status(f"השרת דחה את הרישום: {reply.get('error')}", active=False)
                     await asyncio.sleep(10)
                     return
+                log.info("registered on server as %s", self.id)
                 self.ui.status("מוכן, ממתין לטכנאי", active=False)
                 stream_task = asyncio.create_task(self._stream_loop())
                 try:
                     async for msg in ws:
                         if msg.type != aiohttp.WSMsgType.TEXT:
                             continue
-                        await self._on_message(json.loads(msg.data))
+                        try:
+                            await self._on_message(json.loads(msg.data))
+                        except (ConnectionError, aiohttp.ClientError):
+                            raise
+                        except Exception:  # one bad message must never drop the connection
+                            log.exception("error handling message")
                 finally:
                     stream_task.cancel()
                     self.ws = None
@@ -282,6 +328,7 @@ class HostAgent:
         if t == "auth":
             asyncio.create_task(self._authenticate(ev))
         elif t == "session_start":
+            log.info("session start")
             # create the screen capturer BEFORE marking the session active,
             # otherwise the stream loop can run with no capturer yet
             if self.capturer is None:
@@ -294,6 +341,7 @@ class HostAgent:
             await self.ws.send_json({"type": "screen_info", "width": g["width"], "height": g["height"]})
             self.ui.status("הטכנאי מחובר ושולט במחשב", active=True)
         elif t == "session_end":
+            log.info("session end from server")
             self._session_stopped()
         elif not self.session_active:
             return
@@ -323,14 +371,29 @@ class HostAgent:
         sid = ev.get("sid")
         ok_pw = hmac.compare_digest(str(ev.get("password", "")).encode(), self.password.encode())
         if not ok_pw:
+            log.info("auth rejected: bad password from %s", ev.get("remote"))
             await self.ws.send_json({"type": "auth_result", "sid": sid, "ok": False, "reason": "bad password"})
+            return
+        resume = str(ev.get("resume", ""))
+        resuming = bool(
+            resume and self.resume_token
+            and hmac.compare_digest(resume.encode(), self.resume_token.encode())
+            and (self.session_active or time.time() < self.resume_until)
+        )
+        if resuming:
+            log.info("viewer resumed the session after a drop")
+            await self.ws.send_json({"type": "auth_result", "sid": sid, "ok": True,
+                                     "resume": self.resume_token})
             return
         if not self.args.no_confirm:
             accepted = await self.ui.ask_permission(ev.get("remote") or "?")
             if not accepted:
                 await self.ws.send_json({"type": "auth_result", "sid": sid, "ok": False, "reason": "rejected"})
                 return
-        await self.ws.send_json({"type": "auth_result", "sid": sid, "ok": True})
+        self.resume_token = secrets.token_urlsafe(16)
+        self.resume_until = 0.0
+        log.info("session approved for %s", ev.get("remote"))
+        await self.ws.send_json({"type": "auth_result", "sid": sid, "ok": True, "resume": self.resume_token})
 
     async def _stream_loop(self) -> None:
         while True:
@@ -382,7 +445,10 @@ class TkUI:
         self.tk = tk
         self.root = tk.Tk()
         self.root.title("תמיכה מרחוק")
-        self.root.geometry("380x330")
+        w, h = 380, 330
+        x = self.root.winfo_screenwidth() - w - 24
+        y = self.root.winfo_screenheight() - h - 80
+        self.root.geometry(f"{w}x{h}+{max(0, x)}+{max(0, y)}")
         self.root.resizable(False, False)
         self.root.configure(bg="white")
         self.q: queue.Queue = queue.Queue()
@@ -475,7 +541,8 @@ def main() -> None:
     if args.no_confirm and not args.password:
         p.error("--no-confirm requires a fixed --password")
 
-    logging.basicConfig(level=logging.INFO)
+    log_file = setup_logging()
+    log.info("starting host agent, server=%s, log=%s", args.server, log_file)
     enable_dpi_awareness()
 
     if args.console:

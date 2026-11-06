@@ -24,7 +24,9 @@
   #toolbar { display:flex; gap:8px; align-items:center; padding:6px 10px; background:var(--panel); flex-wrap:wrap; }
   #toolbar .spacer { flex:1; }
   #toolbar select, #toolbar input { width:auto; font-size:14px; padding:6px; }
-  #stage { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#000; }
+  #overlay { display:none; position:absolute; inset:0; align-items:center; justify-content:center;
+             background:rgba(15,23,42,.7); color:#fbbf24; font-size:22px; }
+  #stage { position:relative; flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#000; }
   canvas { max-width:100%; max-height:100%; cursor:none; outline:none; image-rendering:auto; }
   #stats { color:var(--muted); font-size:12px; direction:ltr; }
 </style>
@@ -56,7 +58,7 @@
     <span id="hostName"></span>
     <span id="stats"></span>
   </div>
-  <div id="stage"><canvas id="screen" tabindex="0"></canvas></div>
+  <div id="stage"><canvas id="screen" tabindex="0"></canvas><div id="overlay"></div></div>
 </div>
 
 <script>
@@ -83,18 +85,61 @@
     if (on) canvas.focus();
   }
 
-  function connect() {
+  // Reconnect state: after an approved session the host hands us a resume
+  // token, so a dropped connection can come back without asking the customer again.
+  let resumeToken = "", retrying = false, attempts = 0, userClosed = false, ended = false;
+  const MAX_ATTEMPTS = 20;
+
+  function setOverlay(text) {
+    $("overlay").textContent = text || "";
+    $("overlay").style.display = text ? "flex" : "none";
+  }
+
+  function scheduleReconnect() {
+    attempts++;
+    if (attempts > MAX_ATTEMPTS) {
+      retrying = false; setOverlay(""); showSession(false);
+      setMsg("החיבור נותק ולא הצלחנו להתחבר מחדש. אפשר לנסות שוב.");
+      return;
+    }
+    retrying = true;
+    setOverlay(`החיבור נותק, מתחבר מחדש... (${attempts})`);
+    setTimeout(() => connect(true), Math.min(1000 * attempts, 5000));
+  }
+
+  // Keep-alive: a silently dropped connection (Wi-Fi/NAT) never fires "close"
+  // in the browser, so ping every 3s and treat 10s of silence as a drop.
+  setInterval(() => {
+    const sock = ws;
+    if (!sock || sock.readyState !== 1 || !connected) return;
+    sock.send('{"type":"ping"}');
+    if (Date.now() - sock.lastSeen > 10000) {
+      ws = null; connected = false;
+      try { sock.close(); } catch (_) {}
+      $("connectBtn").disabled = false;
+      if (resumeToken && !userClosed && !ended) scheduleReconnect();
+      else { showSession(false); setMsg("החיבור לשרת נותק"); }
+    }
+  }, 3000);
+
+  function connect(isRetry = false) {
     const id = $("hostId").value.replace(/\s+/g, "");
     const password = $("password").value;
     if (!id || !password) { setMsg("נא למלא מזהה וסיסמה"); return; }
+    if (!isRetry) { resumeToken = ""; attempts = 0; retrying = false; }
+    userClosed = false; ended = false;
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(`${proto}//${location.host}/ws/viewer`);
-    ws.binaryType = "blob";
+    const sock = new WebSocket(`${proto}//${location.host}/ws/viewer`);
+    ws = sock;
+    sock.binaryType = "blob";
     $("connectBtn").disabled = true;
-    setMsg("מתחבר...");
+    if (!isRetry) setMsg("מתחבר...");
 
-    ws.onopen = () => send({ id, password });
-    ws.onmessage = async (e) => {
+    sock.onopen = () => sock.send(JSON.stringify({ id, password, resume: resumeToken }));
+    sock.lastSeen = Date.now();
+    sock.onmessage = async (e) => {
+      if (sock !== ws) return;
+      sock.lastSeen = Date.now();
       if (typeof e.data !== "string") {
         // a JPEG frame
         frames++; bytes += e.data.size;
@@ -111,24 +156,40 @@
         return;
       }
       const m = JSON.parse(e.data);
-      if (m.type === "waiting") setMsg(m.message);
-      else if (m.type === "error") { setMsg(m.error); }
+      if (m.type === "pong") return;
+      if (m.type === "waiting") { if (!retrying) setMsg(m.message); }
+      else if (m.type === "error") {
+        if (retrying && /לא מחובר|התנתק/.test(m.error)) return;  // host still reconnecting; keep trying
+        ended = true; retrying = false; setOverlay(""); setMsg(m.error);
+      }
       else if (m.type === "connected") {
-        connected = true; setMsg("");
+        connected = true; retrying = false; attempts = 0;
+        if (m.resume) resumeToken = m.resume;
+        setMsg(""); setOverlay("");
         $("hostName").textContent = m.name ? `מחובר ל: ${m.name}` : "";
         showSession(true);
         send({ type: "settings", ...PRESETS[$("quality").value] });
       } else if (m.type === "session_end") {
+        ended = true;
         setMsg(m.reason || "החיבור הסתיים");
-        ws.close();
+        sock.close();
       }
     };
-    ws.onclose = () => {
-      $("connectBtn").disabled = false;
-      if (connected) { connected = false; showSession(false); if (!$("msg").textContent) setMsg("החיבור נותק"); }
+    sock.onclose = (e) => {
+      if (sock !== ws) return;
       ws = null;
+      $("connectBtn").disabled = false;
+      const wasActive = connected || retrying;
+      connected = false;
+      if (wasActive && !userClosed && !ended && resumeToken) {
+        scheduleReconnect();
+        return;
+      }
+      retrying = false; setOverlay("");
+      if (wasActive) showSession(false);
+      if (!$("msg").textContent || $("msg").textContent === "מתחבר...")
+        setMsg(e.code === 1000 ? "החיבור הסתיים" : `החיבור לשרת נותק (קוד ${e.code})`);
     };
-    ws.onerror = () => setMsg("שגיאת חיבור לשרת");
   }
 
   // ---------------------------------------------------------- input capture --
@@ -169,9 +230,12 @@
   });
 
   // ----------------------------------------------------------------- toolbar --
-  $("connectBtn").onclick = connect;
-  $("password").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
-  $("disconnectBtn").onclick = () => { setMsg("החיבור נותק"); ws && ws.close(); };
+  $("connectBtn").onclick = () => connect(false);
+  $("password").addEventListener("keydown", e => { if (e.key === "Enter") connect(false); });
+  $("disconnectBtn").onclick = () => {
+    userClosed = true; retrying = false; setOverlay(""); setMsg("החיבור נותק");
+    if (ws) ws.close(); else showSession(false);
+  };
   $("fullscreenBtn").onclick = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else $("session").requestFullscreen().then(() => {

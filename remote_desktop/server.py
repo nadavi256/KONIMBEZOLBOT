@@ -31,14 +31,16 @@ STATIC_DIR = Path(__file__).parent / "static"
 MAX_FAILED_ATTEMPTS = 5          # wrong passwords before a host ID is locked
 LOCKOUT_SECONDS = 300            # how long the lock lasts
 AUTH_TIMEOUT_SECONDS = 60        # time the host has to approve a session
-MAX_INPUT_MSG_BYTES = 4096       # viewer -> host messages are small JSON
+MAX_INPUT_MSG_BYTES = 64 * 1024  # viewer -> host messages are small JSON (text paste can be ~12KB)
+HEARTBEAT_SECONDS = 10           # detect dead connections within ~15s
 
 
 class Host:
-    def __init__(self, host_id: str, ws: web.WebSocketResponse, name: str):
+    def __init__(self, host_id: str, ws: web.WebSocketResponse, name: str, secret: str):
         self.id = host_id
         self.ws = ws
         self.name = name
+        self.secret = secret  # proves a re-registering host is the same machine
         self.viewer: web.WebSocketResponse | None = None
         self.pending: dict[str, asyncio.Future] = {}
         self.failed = 0
@@ -52,7 +54,7 @@ class Relay:
 
     # ---------------------------------------------------------------- host --
     async def host_ws(self, request: web.Request) -> web.WebSocketResponse:
-        ws = web.WebSocketResponse(heartbeat=20, max_msg_size=8 * 1024 * 1024)
+        ws = web.WebSocketResponse(heartbeat=HEARTBEAT_SECONDS, max_msg_size=16 * 1024 * 1024)
         await ws.prepare(request)
         host: Host | None = None
         try:
@@ -72,12 +74,22 @@ class Relay:
                 await ws.send_json({"type": "error", "error": "invalid id"})
                 await ws.close()
                 return ws
-            if host_id in self.hosts:
-                await ws.send_json({"type": "error", "error": "id in use"})
-                await ws.close()
-                return ws
+            secret = str(first.get("secret", ""))
+            old = self.hosts.get(host_id)
+            if old is not None:
+                # Same machine reconnecting after a network drop: replace the
+                # stale connection. Anyone else trying to grab the ID is refused.
+                if not (secret and secrets.compare_digest(secret, old.secret)):
+                    await ws.send_json({"type": "error", "error": "id in use"})
+                    await ws.close()
+                    return ws
+                log.info("host %s reconnected, replacing stale connection", host_id)
+                self.hosts.pop(host_id, None)
+                await old.ws.close()
 
-            host = Host(host_id, ws, str(first.get("name", ""))[:64])
+            host = Host(host_id, ws, str(first.get("name", ""))[:64], secret)
+            if old is not None:
+                host.failed, host.locked_until = old.failed, old.locked_until
             self.hosts[host_id] = host
             await ws.send_json({"type": "registered", "id": host_id})
             log.info("host %s registered (%s)", host_id, request.remote)
@@ -105,19 +117,21 @@ class Relay:
             pass
         finally:
             if host is not None:
-                self.hosts.pop(host.id, None)
+                if self.hosts.get(host.id) is host:
+                    self.hosts.pop(host.id, None)
                 for fut in host.pending.values():
                     if not fut.done():
                         fut.set_result({"ok": False, "reason": "host offline"})
                 if host.viewer is not None and not host.viewer.closed:
-                    await host.viewer.send_json({"type": "session_end", "reason": "host disconnected"})
-                    await host.viewer.close()
+                    # close without a session_end so the viewer auto-reconnects
+                    # once the host is back
+                    await host.viewer.close(code=4001, message=b"host connection lost")
                 log.info("host %s disconnected", host.id)
         return ws
 
     # -------------------------------------------------------------- viewer --
     async def viewer_ws(self, request: web.Request) -> web.WebSocketResponse:
-        ws = web.WebSocketResponse(heartbeat=20, max_msg_size=MAX_INPUT_MSG_BYTES)
+        ws = web.WebSocketResponse(heartbeat=HEARTBEAT_SECONDS, max_msg_size=MAX_INPUT_MSG_BYTES)
         await ws.prepare(request)
         host: Host | None = None
         try:
@@ -132,9 +146,6 @@ class Relay:
             if time.time() < host.locked_until:
                 await ws.send_json({"type": "error", "error": "יותר מדי ניסיונות שגויים, נסה מאוחר יותר"})
                 return ws
-            if host.viewer is not None:
-                await ws.send_json({"type": "error", "error": "המחשב כבר נמצא בשליטה של מישהו אחר"})
-                return ws
 
             await ws.send_json({"type": "waiting", "message": "ממתין לאישור בצד המחשב המרוחק..."})
             sid = secrets.token_hex(8)
@@ -144,6 +155,7 @@ class Relay:
                 "type": "auth",
                 "sid": sid,
                 "password": password,
+                "resume": str(first.get("resume", ""))[:128],
                 "remote": request.remote,
             })
             try:
@@ -167,20 +179,33 @@ class Relay:
                 await ws.send_json({"type": "error", "error": reason})
                 return ws
 
-            if host.viewer is not None:  # someone else won the race
-                await ws.send_json({"type": "error", "error": "המחשב כבר בשליטה"})
-                await host.ws.send_json({"type": "session_end"})
-                return ws
+            if self.hosts.get(host.id) is not host:  # host reconnected meanwhile
+                host = self.hosts.get(host.id)
+                if host is None:
+                    await ws.send_json({"type": "error", "error": "המחשב התנתק"})
+                    return ws
 
+            # Approved (password + customer consent, or a valid resume token).
+            # If an older viewer is still attached - e.g. a dead connection the
+            # server hasn't noticed yet - it is replaced by this one.
+            old_viewer = host.viewer
             host.failed = 0
             host.viewer = ws
-            await ws.send_json({"type": "connected", "name": host.name})
+            if old_viewer is not None and not old_viewer.closed:
+                try:
+                    await old_viewer.send_json({"type": "session_end", "reason": "החיבור עבר לחלון אחר"})
+                    await old_viewer.close()
+                except ConnectionError:
+                    pass
+            await ws.send_json({"type": "connected", "name": host.name, "resume": result.get("resume", "")})
             await host.ws.send_json({"type": "session_start"})
             log.info("session started on host %s from %s", host.id, request.remote)
 
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
-                    if not host.ws.closed:
+                    if msg.data == '{"type":"ping"}':  # viewer keep-alive, answered here
+                        await ws.send_str('{"type":"pong"}')
+                    elif not host.ws.closed:
                         await host.ws.send_str(msg.data)
                 elif msg.type == WSMsgType.ERROR:
                     break
