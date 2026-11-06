@@ -282,12 +282,14 @@ class HostAgent:
         if t == "auth":
             asyncio.create_task(self._authenticate(ev))
         elif t == "session_start":
-            self.session_active = True
-            self.in_flight = 0
-            self.force_frame = True
+            # create the screen capturer BEFORE marking the session active,
+            # otherwise the stream loop can run with no capturer yet
             if self.capturer is None:
                 self.capturer = await self.loop.run_in_executor(
                     self.capture_pool, ScreenCapturer, self.args.monitor)
+            self.in_flight = 0
+            self.force_frame = True
+            self.session_active = True
             g = self.capturer.geometry
             await self.ws.send_json({"type": "screen_info", "width": g["width"], "height": g["height"]})
             self.ui.status("הטכנאי מחובר ושולט במחשב", active=True)
@@ -337,13 +339,22 @@ class HostAgent:
                 continue
             if self.in_flight >= self.max_in_flight and not self.force_frame:
                 continue  # viewer hasn't caught up - don't build a backlog
-            force, self.force_frame = self.force_frame, False
-            frame = await self.loop.run_in_executor(
-                self.capture_pool, self.capturer.grab_jpeg, self.quality, self.scale, force)
-            if frame is None:
+            if self.capturer is None:
                 continue
-            self.in_flight += 1
-            await self.ws.send_bytes(frame)
+            force, self.force_frame = self.force_frame, False
+            try:
+                frame = await self.loop.run_in_executor(
+                    self.capture_pool, self.capturer.grab_jpeg, self.quality, self.scale, force)
+                if frame is None:
+                    continue
+                self.in_flight += 1
+                await self.ws.send_bytes(frame)
+            except (ConnectionError, aiohttp.ClientError):
+                continue  # connection dropped; the main loop reconnects
+            except Exception as e:  # never let one bad frame stop the stream
+                log.warning("capture error: %s", e)
+                self.force_frame = True
+                await asyncio.sleep(0.5)
 
 
 # ------------------------------------------------------------------------ UI --
