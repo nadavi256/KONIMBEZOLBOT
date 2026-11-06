@@ -213,16 +213,50 @@ class ScreenCapturer:
         m = self.monitor
         return {"left": m["left"], "top": m["top"], "width": m["width"], "height": m["height"]}
 
+    # classic arrow pointer, tip at (0, 0)
+    ARROW = [(0, 0), (0, 17), (4, 13), (7, 20), (10, 19), (7, 12), (12, 12)]
+
+    def cursor_pos(self) -> tuple[int, int] | None:
+        """Mouse position in screen pixels. Screen capture on Windows does not
+        include the cursor, so we draw it into the frame ourselves."""
+        try:
+            if sys.platform == "win32":
+                import ctypes
+                from ctypes import wintypes
+                pt = wintypes.POINT()
+                if ctypes.windll.user32.GetCursorPos(ctypes.byref(pt)):
+                    return pt.x, pt.y
+                return None
+            if not hasattr(self, "_mouse"):
+                from pynput.mouse import Controller
+                self._mouse = Controller()
+            x, y = self._mouse.position
+            return int(x), int(y)
+        except Exception:
+            return None
+
     def grab_jpeg(self, quality: int, scale: float, force: bool) -> bytes | None:
-        from PIL import Image
+        from PIL import Image, ImageDraw
         shot = self.sct.grab(self.monitor)
-        digest = hashlib.blake2b(shot.raw, digest_size=16).digest()
+        cur = self.cursor_pos()
+        if cur is not None:
+            cur = (cur[0] - self.monitor["left"], cur[1] - self.monitor["top"])
+            if not (0 <= cur[0] < shot.size[0] and 0 <= cur[1] < shot.size[1]):
+                cur = None  # cursor is on another monitor
+        h = hashlib.blake2b(shot.raw, digest_size=16)
+        h.update(repr(cur).encode())  # a moving cursor alone also counts as a change
+        digest = h.digest()
         if digest == self.last_digest and not force:
             return None  # nothing changed on screen
         self.last_digest = digest
         img = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
         if scale < 1.0:
             img = img.resize((max(1, int(img.width * scale)), max(1, int(img.height * scale))), Image.BILINEAR)
+        if cur is not None:
+            k = max(1.0, img.width / 1600) if scale >= 1.0 else 1.0  # bigger arrow on big screens
+            cx, cy = cur[0] * scale, cur[1] * scale
+            pts = [(cx + x * k, cy + y * k) for x, y in self.ARROW]
+            ImageDraw.Draw(img).polygon(pts, fill="white", outline="black")
         buf = io.BytesIO()
         img.save(buf, "JPEG", quality=quality, optimize=False)
         return buf.getvalue()
