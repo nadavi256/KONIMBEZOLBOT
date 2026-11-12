@@ -1,0 +1,22 @@
+name: Keep remote-support warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --retry-all-errors --retry-delay 5 --max-time 90 \
+            -o health.json \
+            -w "http=%{http_code} time=%{time_total} size=%{size_download}\n" \
+            "https://remote-support-j2e3.onrender.com/health"
+          cat health.json
+          echo
+          python3 -c 'import json; d=json.load(open("health.json")); assert d.get("ok") is True, d'
