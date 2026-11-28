@@ -1,0 +1,6 @@
+Overall size: 60.00 x 25.77 x 4.0 mm
+Base single piece: True
+Base necks >= 2mm (stays one piece after 1mm opening): True
+ה: leg separate from roof, gap = 2.38 mm
+Letter area thinner than 0.8mm: 0.00 mm² of 588.4 mm²
+Hole Ø4.2 at x=4.60, y=10.82; distance to letters 2.30 mm
