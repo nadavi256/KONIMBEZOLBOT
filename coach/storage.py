@@ -11,7 +11,8 @@ STATE_FILE = os.path.join(DATA_DIR, "coach_state.json")
 MAX_HISTORY = 30  # last N text turns kept as conversation context
 
 _lock = threading.Lock()
-_EMPTY = {"profile": {}, "logs": [], "reminders": [], "history": []}
+_EMPTY = {"profile": {}, "logs": [], "reminders": [], "history": [],
+          "steps": {}, "steps_raw": None, "outbox": [], "meta": {}}
 
 
 def _load() -> dict:
@@ -20,7 +21,7 @@ def _load() -> dict:
     with open(STATE_FILE, encoding="utf-8") as f:
         data = json.load(f)
     for k, v in _EMPTY.items():
-        data.setdefault(k, type(v)())
+        data.setdefault(k, json.loads(json.dumps(v)))
     return data
 
 
@@ -110,4 +111,58 @@ def clear_history() -> None:
     with _lock:
         data = _load()
         data["history"] = []
+        _save(data)
+
+
+# ---------- steps (from the watch pedometer) ----------
+def update_steps(raw_counter: int, day: str) -> int:
+    """The watch reports its raw pedometer counter (counts since power-on).
+    Turn that into a per-day total that survives reboots and midnight."""
+    with _lock:
+        data = _load()
+        last = data["steps_raw"]
+        delta = raw_counter if last is None or raw_counter < last else raw_counter - last
+        data["steps_raw"] = raw_counter
+        data["steps"][day] = data["steps"].get(day, 0) + delta
+        # keep ~3 months
+        for d in sorted(data["steps"])[:-90]:
+            del data["steps"][d]
+        _save(data)
+        return data["steps"][day]
+
+
+def get_steps() -> dict:
+    with _lock:
+        return dict(_load()["steps"])
+
+
+# ---------- outbox: proactive messages waiting for the watch ----------
+def push_outbox(text: str) -> None:
+    with _lock:
+        data = _load()
+        data["outbox"].append(text)
+        data["outbox"] = data["outbox"][-10:]
+        _save(data)
+
+
+def pop_outbox() -> str | None:
+    with _lock:
+        data = _load()
+        if not data["outbox"]:
+            return None
+        text = data["outbox"].pop(0)
+        _save(data)
+        return text
+
+
+# ---------- small key/value for scheduler bookkeeping ----------
+def get_meta(key: str, default=None):
+    with _lock:
+        return _load()["meta"].get(key, default)
+
+
+def set_meta(key: str, value) -> None:
+    with _lock:
+        data = _load()
+        data["meta"][key] = value
         _save(data)

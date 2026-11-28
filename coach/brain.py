@@ -27,6 +27,8 @@ SYSTEM_PROMPT = """\
 2. מאמן תזונה והרגלים — עוזר עם ארוחות, חלבון, שתייה, שינה וצעדים. כשהמשתמש שולח \
 תמונה של אוכל — תן הערכה גסה של קלוריות וחלבון ותגיד שזו הערכה.
 3. עוזר אישי — תזכורות, משימות, סדר יום, מוטיבציה ושיחה.
+המשתמש עונד שעון חכם שסופר צעדים ומדבר איתו בקול; לפעמים הוא כותב לך גם בטלגרם. \
+זה אותו אדם ואותו זיכרון בשני הערוצים. נתוני הצעדים מופיעים בהקשר למטה.
 
 איך אתה עובד:
 - כתוב בעברית טבעית, קצר וחם, כמו הודעת וואטסאפ ממאמן — לא מאמרים. רשימות קצרות כשצריך.
@@ -150,26 +152,38 @@ def _run_tool(name: str, args: dict, schedule_reminder: Callable[[dict], None]) 
     return f"error: unknown tool {name}"
 
 
-def _context_block() -> str:
+WATCH_NOTE = (
+    "ההודעה הזאת הגיעה בקול דרך השעון החכם של המשתמש, והתשובה שלך תוקרא לו בקול "
+    "ותוצג על מסך קטן. ענה ב-1-3 משפטים קצרים ומדוברים, בלי רשימות, בלי אימוג'ים ובלי סימני עיצוב. "
+    "התמלול אוטומטי ועלול להכיל טעויות — אם משהו לא ברור, שאל בקצרה."
+)
+
+
+def _context_block(channel: str) -> str:
     profile = storage.get_profile()
     today = storage.get_logs(1, None, now())
     weekdays = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
     n = now()
+    steps = storage.get_steps()
+    week = {d: steps[d] for d in sorted(steps)[-7:]}
     return (
         f"עכשיו: יום {weekdays[n.weekday()]}, {n.strftime('%Y-%m-%d %H:%M')} (שעון ישראל)\n"
         f"פרופיל המשתמש (זיכרון קבוע): {json.dumps(profile, ensure_ascii=False) if profile else 'ריק — עוד לא הכרתם'}\n"
-        f"רישומים מה-24 שעות האחרונות: {json.dumps(today, ensure_ascii=False) if today else 'אין'}"
+        f"רישומים מה-24 שעות האחרונות: {json.dumps(today, ensure_ascii=False) if today else 'אין'}\n"
+        f"צעדים מהשעון (7 ימים אחרונים): {json.dumps(week) if week else 'אין עדיין נתונים'}"
+        + (f"\n\n{WATCH_NOTE}" if channel == "watch" else "")
     )
 
 
 def chat(user_content: str | list, history_text: str,
-         schedule_reminder: Callable[[dict], None]) -> str:
+         schedule_reminder: Callable[[dict], None] = lambda r: None,
+         channel: str = "telegram") -> str:
     """Send one user message (text or content blocks) and return the coach's reply text.
     `history_text` is the plain-text version stored in chat history."""
     messages = list(storage.get_history()) + [{"role": "user", "content": user_content}]
     system = [
         {"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}},
-        {"type": "text", "text": _context_block()},
+        {"type": "text", "text": _context_block(channel)},
     ]
 
     reply = ""
