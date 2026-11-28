@@ -25,7 +25,9 @@ LETTER_H = 1.0          # raised white letters
 BORDER = 1.5            # magenta frame around the letters
 HOLE_D = 4.2            # key-ring hole
 HOLE_WALL = 2.5         # material around the hole
-CLOSE_R = 2.5           # morphological closing -> solid joins between letters
+CLOSE_R = 0.8           # tiny closing: only rounds the notches where outlines meet
+LETTER_GAP = 0.8        # max gap between neighbouring letters (outlines overlap -> one piece)
+MIN_HOLE_AREA = 6.0     # inner openings smaller than this (mm²) are filled
 MIN_HE_GAP = 1.0        # minimum gap between the ה leg and its roof (mm)
 
 name = sys.argv[1]
@@ -98,6 +100,17 @@ def build(scale):
                 leg = leg.difference(roof.buffer(MIN_HE_GAP))
             g = unary_union([roof, leg])
         fixed.append((ch, g))
+    # tighten spacing so neighbouring outlines overlap (outline-style base, no filler plate)
+    from shapely import affinity
+    tight = [fixed[0]]
+    for ch, g in fixed[1:]:
+        prev = unary_union([t for _, t in tight])
+        for _ in range(4):
+            d = prev.distance(g)
+            if d <= LETTER_GAP + 0.01: break
+            g = affinity.translate(g, -(d - LETTER_GAP))
+        tight.append((ch, g))
+    fixed = tight
     letters = unary_union([g for _, g in fixed])
     minx, miny, maxx, maxy = letters.bounds
     # ring tab on the LEFT side, vertically centred on the leftmost letter
@@ -105,17 +118,17 @@ def build(scale):
     lb = left_letter.bounds
     hole_r = HOLE_D / 2; tab_r = hole_r + HOLE_WALL
     cy = (lb[1] + lb[3]) / 2
-    # x of the left edge of the letters around the hole height
     band = letters.intersection(box(minx - 1, cy - tab_r, maxx + 1, cy + tab_r))
     edge_x = band.bounds[0] if not band.is_empty else minx
-    cx = edge_x - BORDER - hole_r - 0.6
-    tab = Point(cx, cy).buffer(tab_r, 64)
-    bridge = box(cx, cy - tab_r, edge_x + 2, cy + tab_r)
-    raw = unary_union([letters.buffer(BORDER, 32), tab, bridge])
-    base = raw.buffer(CLOSE_R, 32).buffer(-CLOSE_R, 32)          # solid joins
-    if isinstance(base, MultiPolygon):                            # last resort
-        base = unary_union([base, box(*letters.bounds)]).buffer(CLOSE_R).buffer(-CLOSE_R)
-    base = Polygon(base.exterior)                                  # fill any inner holes
+    cx = edge_x - BORDER - hole_r - 0.8
+    from shapely.geometry import LineString
+    tab = unary_union([Point(cx, cy).buffer(tab_r, 64),
+                       LineString([(cx, cy), (edge_x + 1.0, cy)]).buffer(tab_r * 0.75, 32)])
+    raw = unary_union([letters.buffer(BORDER, 32), tab])
+    base = raw.buffer(CLOSE_R, 32).buffer(-CLOSE_R, 32)
+    if isinstance(base, MultiPolygon):
+        raise SystemExit("base is not one piece - reduce LETTER_GAP")
+    base = Polygon(base.exterior, [r for r in base.interiors if Polygon(r).area >= MIN_HOLE_AREA])
     base = base.difference(Point(cx, cy).buffer(hole_r, 96))
     return letters, base, fixed, (cx, cy)
 
