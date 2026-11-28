@@ -1,8 +1,7 @@
 // Copy this file to config.h and fill in your details.
 #pragma once
 
-// WiFi — your home network or your phone's hotspot (2.4GHz only).
-// You can list several; the watch tries them in order.
+// WiFi — home network and/or your phone's hotspot (2.4GHz). Tried in order.
 static const char *WIFI_LIST[][2] = {
     {"HomeWiFi", "password"},
     {"MyPhoneHotspot", "password"},
@@ -13,8 +12,7 @@ static const char *WIFI_LIST[][2] = {
 // Must equal DEVICE_KEY on the server
 #define DEVICE_KEY  "change-me-long-random-string"
 
-#define DAILY_STEP_GOAL     8000
-#define SCREEN_TIMEOUT_MS   20000   // turn the screen off after this much idle time
-#define POLL_INTERVAL_MS    60000   // check for coach messages / sync steps
+#define SCREEN_TIMEOUT_MS   30000   // backlight off after this much idle time
+#define POLL_INTERVAL_MS    120000  // check for messages from the pet's brain
 #define MAX_RECORD_SECONDS  12
-#define SPEAKER_VOLUME      90      // 0-100
+#define SPEAKER_VOLUME      170     // 0-255; M5Stack advises < ~75% on battery

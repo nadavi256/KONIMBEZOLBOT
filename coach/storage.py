@@ -114,9 +114,9 @@ def clear_history() -> None:
         _save(data)
 
 
-# ---------- steps (from the watch pedometer) ----------
+# ---------- steps (from the pet device pedometer) ----------
 def update_steps(raw_counter: int, day: str) -> int:
-    """The watch reports its raw pedometer counter (counts since power-on).
+    """The device reports its raw pedometer counter (counts since power-on).
     Turn that into a per-day total that survives reboots and midnight."""
     with _lock:
         data = _load()
@@ -136,7 +136,7 @@ def get_steps() -> dict:
         return dict(_load()["steps"])
 
 
-# ---------- outbox: proactive messages waiting for the watch ----------
+# ---------- outbox: proactive messages waiting for the pet device ----------
 def push_outbox(text: str) -> None:
     with _lock:
         data = _load()

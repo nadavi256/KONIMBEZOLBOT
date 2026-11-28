@@ -37,7 +37,7 @@ _EMOJI = re.compile("[\U0001F000-\U0001FAFF☀-➿️‍]")
 
 
 def speak(text: str) -> bytes:
-    """Text -> raw PCM 16kHz (what the watch speaker plays)."""
+    """Text -> raw PCM 16kHz (what the device speaker plays)."""
     text = _EMOJI.sub("", re.sub(r"[*_#`]", "", text)).strip()
     if not text:
         return b""

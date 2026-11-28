@@ -6,5 +6,5 @@ __pycache__/
 venv/
 *.log
 coach/data/
-watch/src/config.h
-watch/.pio/
+pet/src/config.h
+pet/.pio/
